@@ -3,9 +3,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Users, Clock, Stethoscope, Edit, Trash2, Eye } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Search, Users, Clock, Stethoscope, Edit, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 interface Service {
   id: string;
@@ -18,7 +23,7 @@ interface Service {
   description: string;
 }
 
-const mockServices: Service[] = [
+const initialServices: Service[] = [
   {
     id: "1",
     name: "Cardiology Unit",
@@ -73,9 +78,13 @@ const mockServices: Service[] = [
 
 export default function HospitalServices() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [services, setServices] = useState<Service[]>(initialServices);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
   const navigate = useNavigate();
 
-  const filteredServices = mockServices.filter(service =>
+  const filteredServices = services.filter(service =>
     service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     service.department.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -89,6 +98,31 @@ export default function HospitalServices() {
       case "inactive":
         return <Badge variant="secondary">Inactive</Badge>;
     }
+  };
+
+  const handleEdit = (service: Service) => {
+    setSelectedService({ ...service });
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedService) return;
+    setServices(services.map(s => s.id === selectedService.id ? selectedService : s));
+    setEditDialogOpen(false);
+    toast.success("Service updated successfully");
+  };
+
+  const handleDelete = (service: Service) => {
+    setSelectedService(service);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (!selectedService) return;
+    setServices(services.filter(s => s.id !== selectedService.id));
+    setDeleteDialogOpen(false);
+    toast.success("Service removed successfully");
   };
 
   return (
@@ -114,7 +148,7 @@ export default function HospitalServices() {
                   <Stethoscope className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{mockServices.length}</p>
+                  <p className="text-2xl font-bold">{services.length}</p>
                   <p className="text-sm text-muted-foreground">Total Services</p>
                 </div>
               </div>
@@ -127,7 +161,7 @@ export default function HospitalServices() {
                   <Users className="w-5 h-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{mockServices.filter(s => s.status === "active").length}</p>
+                  <p className="text-2xl font-bold">{services.filter(s => s.status === "active").length}</p>
                   <p className="text-sm text-muted-foreground">Active Services</p>
                 </div>
               </div>
@@ -140,7 +174,7 @@ export default function HospitalServices() {
                   <Clock className="w-5 h-5 text-amber-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{mockServices.reduce((acc, s) => acc + s.currentInterns, 0)}</p>
+                  <p className="text-2xl font-bold">{services.reduce((acc, s) => acc + s.currentInterns, 0)}</p>
                   <p className="text-sm text-muted-foreground">Current Interns</p>
                 </div>
               </div>
@@ -153,7 +187,7 @@ export default function HospitalServices() {
                   <Users className="w-5 h-5 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{mockServices.reduce((acc, s) => acc + s.capacity, 0)}</p>
+                  <p className="text-2xl font-bold">{services.reduce((acc, s) => acc + s.capacity, 0)}</p>
                   <p className="text-sm text-muted-foreground">Total Capacity</p>
                 </div>
               </div>
@@ -212,11 +246,11 @@ export default function HospitalServices() {
                 </div>
 
                 <div className="flex gap-2 pt-2">
-                  <Button variant="outline" size="sm" className="flex-1">
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEdit(service)}>
                     <Edit className="w-4 h-4 mr-1" />
                     Edit
                   </Button>
-                  <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                  <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDelete(service)}>
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
@@ -224,6 +258,103 @@ export default function HospitalServices() {
             </Card>
           ))}
         </div>
+
+        {/* Edit Dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Edit Service</DialogTitle>
+            </DialogHeader>
+            {selectedService && (
+              <form onSubmit={handleSaveEdit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Service Name</Label>
+                  <Input
+                    id="name"
+                    value={selectedService.name}
+                    onChange={(e) => setSelectedService({ ...selectedService, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="department">Department</Label>
+                  <Input
+                    id="department"
+                    value={selectedService.department}
+                    onChange={(e) => setSelectedService({ ...selectedService, department: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="head">Head</Label>
+                  <Input
+                    id="head"
+                    value={selectedService.head}
+                    onChange={(e) => setSelectedService({ ...selectedService, head: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="capacity">Capacity</Label>
+                    <Input
+                      id="capacity"
+                      type="number"
+                      value={selectedService.capacity}
+                      onChange={(e) => setSelectedService({ ...selectedService, capacity: parseInt(e.target.value) || 0 })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="status">Status</Label>
+                    <Select
+                      value={selectedService.status}
+                      onValueChange={(value: "active" | "full" | "inactive") => setSelectedService({ ...selectedService, status: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="full">Full</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={selectedService.description}
+                    onChange={(e) => setSelectedService({ ...selectedService, description: e.target.value })}
+                    rows={3}
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+                  <Button type="submit">Save Changes</Button>
+                </div>
+              </form>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Remove Service</DialogTitle>
+            </DialogHeader>
+            <p className="text-muted-foreground">
+              Are you sure you want to remove "{selectedService?.name}"? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+              <Button variant="destructive" onClick={confirmDelete}>Remove</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

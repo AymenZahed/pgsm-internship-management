@@ -1,13 +1,17 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Calendar, GraduationCap, FileText, Check, X, Eye, Clock } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Search, Calendar, GraduationCap, FileText, Check, X, Eye, Clock, Download } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 type ApplicationStatus = "pending" | "reviewing" | "accepted" | "rejected";
 
@@ -24,9 +28,11 @@ interface Application {
   status: ApplicationStatus;
   documents: string[];
   gpa: string;
+  motivation: string;
+  experience: string;
 }
 
-const mockApplications: Application[] = [
+const initialApplications: Application[] = [
   {
     id: "1",
     studentName: "Youssef El Amrani",
@@ -38,7 +44,9 @@ const mockApplications: Application[] = [
     appliedAt: "2024-01-18",
     status: "pending",
     documents: ["CV", "Cover Letter", "Transcripts"],
-    gpa: "15.5/20"
+    gpa: "15.5/20",
+    motivation: "I am passionate about cardiology and would like to gain hands-on experience in this field.",
+    experience: "Completed a 1-month observation at a local clinic."
   },
   {
     id: "2",
@@ -51,7 +59,9 @@ const mockApplications: Application[] = [
     appliedAt: "2024-01-17",
     status: "reviewing",
     documents: ["CV", "Cover Letter", "Transcripts", "Recommendation Letter"],
-    gpa: "16.2/20"
+    gpa: "16.2/20",
+    motivation: "Emergency medicine fascinates me due to its fast-paced nature and critical decision-making.",
+    experience: "Volunteer at Red Cross for 2 years."
   },
   {
     id: "3",
@@ -64,7 +74,9 @@ const mockApplications: Application[] = [
     appliedAt: "2024-01-16",
     status: "accepted",
     documents: ["CV", "Cover Letter"],
-    gpa: "14.8/20"
+    gpa: "14.8/20",
+    motivation: "Cardiac health has been my primary interest since my second year of medical school.",
+    experience: "Research assistant in cardiology lab."
   },
   {
     id: "4",
@@ -77,7 +89,9 @@ const mockApplications: Application[] = [
     appliedAt: "2024-01-15",
     status: "rejected",
     documents: ["CV", "Cover Letter"],
-    gpa: "13.2/20"
+    gpa: "13.2/20",
+    motivation: "I want to specialize in pediatric care.",
+    experience: "No prior clinical experience."
   },
   {
     id: "5",
@@ -90,7 +104,9 @@ const mockApplications: Application[] = [
     appliedAt: "2024-01-14",
     status: "pending",
     documents: ["CV", "Cover Letter", "Transcripts"],
-    gpa: "15.0/20"
+    gpa: "15.0/20",
+    motivation: "Emergency medicine aligns with my career goals.",
+    experience: "Completed summer internship at a regional hospital."
   },
 ];
 
@@ -98,6 +114,10 @@ export default function HospitalApplications() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
+  const [applications, setApplications] = useState<Application[]>(initialApplications);
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
+  const [reviewNotes, setReviewNotes] = useState("");
 
   const getStatusBadge = (status: ApplicationStatus) => {
     switch (status) {
@@ -112,7 +132,7 @@ export default function HospitalApplications() {
     }
   };
 
-  const filteredApplications = mockApplications.filter(app => {
+  const filteredApplications = applications.filter(app => {
     const matchesSearch = app.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       app.offer.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesTab = activeTab === "all" || app.status === activeTab;
@@ -121,13 +141,42 @@ export default function HospitalApplications() {
   });
 
   const stats = {
-    total: mockApplications.length,
-    pending: mockApplications.filter(a => a.status === "pending").length,
-    reviewing: mockApplications.filter(a => a.status === "reviewing").length,
-    accepted: mockApplications.filter(a => a.status === "accepted").length,
+    total: applications.length,
+    pending: applications.filter(a => a.status === "pending").length,
+    reviewing: applications.filter(a => a.status === "reviewing").length,
+    accepted: applications.filter(a => a.status === "accepted").length,
   };
 
-  const departments = [...new Set(mockApplications.map(a => a.department))];
+  const departments = [...new Set(applications.map(a => a.department))];
+
+  const handleReview = (application: Application) => {
+    setSelectedApplication(application);
+    setReviewNotes("");
+    setReviewDialogOpen(true);
+  };
+
+  const handleAccept = (appId: string) => {
+    setApplications(applications.map(a => 
+      a.id === appId ? { ...a, status: "accepted" as ApplicationStatus } : a
+    ));
+    setReviewDialogOpen(false);
+    toast.success("Application accepted");
+  };
+
+  const handleReject = (appId: string) => {
+    setApplications(applications.map(a => 
+      a.id === appId ? { ...a, status: "rejected" as ApplicationStatus } : a
+    ));
+    setReviewDialogOpen(false);
+    toast.success("Application rejected");
+  };
+
+  const handleMarkReviewing = (appId: string) => {
+    setApplications(applications.map(a => 
+      a.id === appId ? { ...a, status: "reviewing" as ApplicationStatus } : a
+    ));
+    toast.success("Application marked as reviewing");
+  };
 
   return (
     <AppLayout role="hospital" userName="CHU Ibn Sina">
@@ -271,17 +320,17 @@ export default function HospitalApplications() {
                     </div>
                     
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => handleReview(application)}>
                         <Eye className="w-4 h-4 mr-1" />
                         Review
                       </Button>
                       {(application.status === "pending" || application.status === "reviewing") && (
                         <>
-                          <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                          <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleAccept(application.id)}>
                             <Check className="w-4 h-4 mr-1" />
                             Accept
                           </Button>
-                          <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                          <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleReject(application.id)}>
                             <X className="w-4 h-4 mr-1" />
                             Reject
                           </Button>
@@ -302,6 +351,119 @@ export default function HospitalApplications() {
             </CardContent>
           </Card>
         )}
+
+        {/* Review Dialog */}
+        <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Application Review</DialogTitle>
+            </DialogHeader>
+            {selectedApplication && (
+              <div className="space-y-6">
+                {/* Student Info */}
+                <div className="flex items-start gap-4">
+                  <Avatar className="w-16 h-16">
+                    <AvatarImage src={selectedApplication.studentAvatar} />
+                    <AvatarFallback className="text-lg">{selectedApplication.studentName.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h3 className="text-xl font-semibold">{selectedApplication.studentName}</h3>
+                    <p className="text-muted-foreground">{selectedApplication.studentEmail}</p>
+                    <div className="flex gap-2 mt-2">
+                      {getStatusBadge(selectedApplication.status)}
+                      <Badge variant="outline">{selectedApplication.year}</Badge>
+                      <Badge variant="outline">GPA: {selectedApplication.gpa}</Badge>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Application Details */}
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">University:</span>
+                    <p className="font-medium">{selectedApplication.university}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Applied For:</span>
+                    <p className="font-medium">{selectedApplication.offer}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Department:</span>
+                    <p className="font-medium">{selectedApplication.department}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Applied On:</span>
+                    <p className="font-medium">{new Date(selectedApplication.appliedAt).toLocaleDateString()}</p>
+                  </div>
+                </div>
+
+                {/* Motivation */}
+                <div>
+                  <Label className="text-muted-foreground">Motivation</Label>
+                  <p className="mt-1 p-3 bg-muted/50 rounded-lg text-sm">{selectedApplication.motivation}</p>
+                </div>
+
+                {/* Experience */}
+                <div>
+                  <Label className="text-muted-foreground">Prior Experience</Label>
+                  <p className="mt-1 p-3 bg-muted/50 rounded-lg text-sm">{selectedApplication.experience}</p>
+                </div>
+
+                {/* Documents */}
+                <div>
+                  <Label className="text-muted-foreground">Submitted Documents</Label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {selectedApplication.documents.map((doc, idx) => (
+                      <Button key={idx} variant="outline" size="sm" className="gap-2">
+                        <Download className="w-4 h-4" />
+                        {doc}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Review Notes */}
+                <div>
+                  <Label htmlFor="notes">Review Notes (Internal)</Label>
+                  <Textarea
+                    id="notes"
+                    placeholder="Add notes about this application..."
+                    value={reviewNotes}
+                    onChange={(e) => setReviewNotes(e.target.value)}
+                    rows={3}
+                    className="mt-2"
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="flex justify-between pt-4 border-t">
+                  {selectedApplication.status === "pending" && (
+                    <Button variant="outline" onClick={() => handleMarkReviewing(selectedApplication.id)}>
+                      Mark as Reviewing
+                    </Button>
+                  )}
+                  <div className="flex gap-2 ml-auto">
+                    <Button variant="outline" onClick={() => setReviewDialogOpen(false)}>
+                      Close
+                    </Button>
+                    {(selectedApplication.status === "pending" || selectedApplication.status === "reviewing") && (
+                      <>
+                        <Button variant="outline" className="text-destructive hover:text-destructive" onClick={() => handleReject(selectedApplication.id)}>
+                          <X className="w-4 h-4 mr-1" />
+                          Reject
+                        </Button>
+                        <Button className="bg-green-600 hover:bg-green-700" onClick={() => handleAccept(selectedApplication.id)}>
+                          <Check className="w-4 h-4 mr-1" />
+                          Accept
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

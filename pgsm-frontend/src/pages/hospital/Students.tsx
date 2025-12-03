@@ -3,11 +3,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Calendar, Users, Eye, MessageSquare, FileText, Clock } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Search, Users, Eye, MessageSquare, FileText, Clock, Send } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 interface Student {
   id: string;
@@ -22,6 +27,7 @@ interface Student {
   progress: number;
   attendance: number;
   status: "active" | "completed" | "pending";
+  phone: string;
 }
 
 const mockStudents: Student[] = [
@@ -36,7 +42,8 @@ const mockStudents: Student[] = [
     endDate: "2024-04-15",
     progress: 45,
     attendance: 92,
-    status: "active"
+    status: "active",
+    phone: "+212 661 123 456"
   },
   {
     id: "2",
@@ -49,7 +56,8 @@ const mockStudents: Student[] = [
     endDate: "2024-03-10",
     progress: 68,
     attendance: 88,
-    status: "active"
+    status: "active",
+    phone: "+212 662 234 567"
   },
   {
     id: "3",
@@ -62,7 +70,8 @@ const mockStudents: Student[] = [
     endDate: "2024-05-01",
     progress: 25,
     attendance: 95,
-    status: "active"
+    status: "active",
+    phone: "+212 663 345 678"
   },
   {
     id: "4",
@@ -75,7 +84,8 @@ const mockStudents: Student[] = [
     endDate: "2024-01-01",
     progress: 100,
     attendance: 96,
-    status: "completed"
+    status: "completed",
+    phone: "+212 664 456 789"
   },
   {
     id: "5",
@@ -88,7 +98,8 @@ const mockStudents: Student[] = [
     endDate: "2024-04-15",
     progress: 0,
     attendance: 0,
-    status: "pending"
+    status: "pending",
+    phone: "+212 665 567 890"
   },
 ];
 
@@ -96,6 +107,11 @@ export default function HospitalStudents() {
   const [searchQuery, setSearchQuery] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [messageDialogOpen, setMessageDialogOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [messageText, setMessageText] = useState("");
+  const navigate = useNavigate();
 
   const getStatusBadge = (status: Student["status"]) => {
     switch (status) {
@@ -123,6 +139,24 @@ export default function HospitalStudents() {
     active: mockStudents.filter(s => s.status === "active").length,
     completed: mockStudents.filter(s => s.status === "completed").length,
     avgAttendance: Math.round(mockStudents.filter(s => s.status === "active").reduce((acc, s) => acc + s.attendance, 0) / mockStudents.filter(s => s.status === "active").length),
+  };
+
+  const handleView = (student: Student) => {
+    setSelectedStudent(student);
+    setViewDialogOpen(true);
+  };
+
+  const handleMessage = (student: Student) => {
+    setSelectedStudent(student);
+    setMessageText("");
+    setMessageDialogOpen(true);
+  };
+
+  const handleSendMessage = () => {
+    if (!messageText.trim()) return;
+    toast.success(`Message sent to ${selectedStudent?.name}`);
+    setMessageDialogOpen(false);
+    setMessageText("");
   };
 
   return (
@@ -284,11 +318,11 @@ export default function HospitalStudents() {
                 )}
 
                 <div className="flex gap-2 pt-2">
-                  <Button variant="outline" size="sm" className="flex-1">
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => handleView(student)}>
                     <Eye className="w-4 h-4 mr-1" />
                     View
                   </Button>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => handleMessage(student)}>
                     <MessageSquare className="w-4 h-4" />
                   </Button>
                 </div>
@@ -304,6 +338,105 @@ export default function HospitalStudents() {
             </CardContent>
           </Card>
         )}
+
+        {/* View Dialog */}
+        <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Student Details</DialogTitle>
+            </DialogHeader>
+            {selectedStudent && (
+              <div className="space-y-6">
+                <div className="flex items-start gap-4">
+                  <Avatar className="w-16 h-16">
+                    <AvatarImage src={selectedStudent.avatar} />
+                    <AvatarFallback className="text-lg">{selectedStudent.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h3 className="text-xl font-semibold">{selectedStudent.name}</h3>
+                    <p className="text-muted-foreground">{selectedStudent.email}</p>
+                    <p className="text-sm text-muted-foreground">{selectedStudent.phone}</p>
+                    <div className="mt-2">{getStatusBadge(selectedStudent.status)}</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">University:</span>
+                    <p className="font-medium">{selectedStudent.university}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Department:</span>
+                    <p className="font-medium">{selectedStudent.department}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Tutor:</span>
+                    <p className="font-medium">{selectedStudent.tutor}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Internship Period:</span>
+                    <p className="font-medium">{new Date(selectedStudent.startDate).toLocaleDateString()} - {new Date(selectedStudent.endDate).toLocaleDateString()}</p>
+                  </div>
+                </div>
+
+                {selectedStudent.status !== "pending" && (
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex justify-between text-sm mb-2">
+                        <span className="text-muted-foreground">Overall Progress</span>
+                        <span className="font-medium">{selectedStudent.progress}%</span>
+                      </div>
+                      <Progress value={selectedStudent.progress} className="h-3" />
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-sm mb-2">
+                        <span className="text-muted-foreground">Attendance Rate</span>
+                        <span className="font-medium">{selectedStudent.attendance}%</span>
+                      </div>
+                      <Progress value={selectedStudent.attendance} className="h-3" />
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 pt-4 border-t">
+                  <Button variant="outline" onClick={() => setViewDialogOpen(false)}>Close</Button>
+                  <Button onClick={() => { setViewDialogOpen(false); handleMessage(selectedStudent); }}>
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    Send Message
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Message Dialog */}
+        <Dialog open={messageDialogOpen} onOpenChange={setMessageDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Send Message to {selectedStudent?.name}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="message">Message</Label>
+                <Textarea
+                  id="message"
+                  placeholder="Type your message..."
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  rows={4}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setMessageDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleSendMessage} disabled={!messageText.trim()}>
+                  <Send className="w-4 h-4 mr-2" />
+                  Send
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

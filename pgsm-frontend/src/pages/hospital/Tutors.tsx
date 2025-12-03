@@ -3,10 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Search, Plus, Users, Star, Mail, Phone, Edit, Eye } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 interface Tutor {
   id: string;
@@ -23,7 +26,7 @@ interface Tutor {
   status: "active" | "inactive" | "on_leave";
 }
 
-const mockTutors: Tutor[] = [
+const initialTutors: Tutor[] = [
   {
     id: "1",
     name: "Dr. Ahmed Benali",
@@ -95,6 +98,20 @@ export default function HospitalTutors() {
   const [searchQuery, setSearchQuery] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [tutors, setTutors] = useState<Tutor[]>(initialTutors);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [selectedTutor, setSelectedTutor] = useState<Tutor | null>(null);
+  const [newTutor, setNewTutor] = useState<Partial<Tutor>>({
+    name: "",
+    email: "",
+    phone: "",
+    department: "",
+    specialty: "",
+    maxStudents: 4,
+    status: "active"
+  });
 
   const getStatusBadge = (status: Tutor["status"]) => {
     switch (status) {
@@ -107,7 +124,7 @@ export default function HospitalTutors() {
     }
   };
 
-  const filteredTutors = mockTutors.filter(tutor => {
+  const filteredTutors = tutors.filter(tutor => {
     const matchesSearch = tutor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       tutor.specialty.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesDept = departmentFilter === "all" || tutor.department === departmentFilter;
@@ -115,13 +132,60 @@ export default function HospitalTutors() {
     return matchesSearch && matchesDept && matchesStatus;
   });
 
-  const departments = [...new Set(mockTutors.map(t => t.department))];
+  const departments = [...new Set(tutors.map(t => t.department))];
 
   const stats = {
-    total: mockTutors.length,
-    active: mockTutors.filter(t => t.status === "active").length,
-    totalStudents: mockTutors.reduce((acc, t) => acc + t.currentStudents, 0),
-    avgRating: (mockTutors.reduce((acc, t) => acc + t.rating, 0) / mockTutors.length).toFixed(1),
+    total: tutors.length,
+    active: tutors.filter(t => t.status === "active").length,
+    totalStudents: tutors.reduce((acc, t) => acc + t.currentStudents, 0),
+    avgRating: (tutors.reduce((acc, t) => acc + t.rating, 0) / tutors.length).toFixed(1),
+  };
+
+  const handleView = (tutor: Tutor) => {
+    setSelectedTutor(tutor);
+    setViewDialogOpen(true);
+  };
+
+  const handleEdit = (tutor: Tutor) => {
+    setSelectedTutor({ ...tutor });
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTutor) return;
+    setTutors(tutors.map(t => t.id === selectedTutor.id ? selectedTutor : t));
+    setEditDialogOpen(false);
+    toast.success("Tutor updated successfully");
+  };
+
+  const handleAddTutor = (e: React.FormEvent) => {
+    e.preventDefault();
+    const tutor: Tutor = {
+      id: Date.now().toString(),
+      name: newTutor.name || "",
+      email: newTutor.email || "",
+      phone: newTutor.phone || "",
+      department: newTutor.department || "",
+      specialty: newTutor.specialty || "",
+      currentStudents: 0,
+      maxStudents: newTutor.maxStudents || 4,
+      totalSupervised: 0,
+      rating: 0,
+      status: newTutor.status as Tutor["status"] || "active"
+    };
+    setTutors([tutor, ...tutors]);
+    setAddDialogOpen(false);
+    setNewTutor({
+      name: "",
+      email: "",
+      phone: "",
+      department: "",
+      specialty: "",
+      maxStudents: 4,
+      status: "active"
+    });
+    toast.success("Tutor added successfully");
   };
 
   return (
@@ -132,7 +196,7 @@ export default function HospitalTutors() {
             <h1 className="text-3xl font-bold text-foreground">Tutors Management</h1>
             <p className="text-muted-foreground mt-1">Manage doctors supervising interns</p>
           </div>
-          <Button>
+          <Button onClick={() => setAddDialogOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Add Tutor
           </Button>
@@ -266,7 +330,7 @@ export default function HospitalTutors() {
                     <span className="text-muted-foreground">Rating</span>
                     <span className="flex items-center gap-1 font-medium">
                       <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                      {tutor.rating}
+                      {tutor.rating || "N/A"}
                     </span>
                   </div>
                 </div>
@@ -295,11 +359,11 @@ export default function HospitalTutors() {
                 </div>
 
                 <div className="flex gap-2 pt-2">
-                  <Button variant="outline" size="sm" className="flex-1">
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => handleView(tutor)}>
                     <Eye className="w-4 h-4 mr-1" />
                     View
                   </Button>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => handleEdit(tutor)}>
                     <Edit className="w-4 h-4" />
                   </Button>
                 </div>
@@ -315,6 +379,261 @@ export default function HospitalTutors() {
             </CardContent>
           </Card>
         )}
+
+        {/* View Dialog */}
+        <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Tutor Details</DialogTitle>
+            </DialogHeader>
+            {selectedTutor && (
+              <div className="space-y-6">
+                <div className="flex items-start gap-4">
+                  <Avatar className="w-16 h-16">
+                    <AvatarImage src={selectedTutor.avatar} />
+                    <AvatarFallback className="text-lg">{selectedTutor.name.split(' ').slice(1).map(n => n[0]).join('')}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h3 className="text-xl font-semibold">{selectedTutor.name}</h3>
+                    <p className="text-muted-foreground">{selectedTutor.specialty}</p>
+                    <div className="mt-2">{getStatusBadge(selectedTutor.status)}</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Email:</span>
+                    <p className="font-medium">{selectedTutor.email}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Phone:</span>
+                    <p className="font-medium">{selectedTutor.phone}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Department:</span>
+                    <p className="font-medium">{selectedTutor.department}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Rating:</span>
+                    <p className="font-medium flex items-center gap-1">
+                      <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                      {selectedTutor.rating || "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Current Students:</span>
+                    <p className="font-medium">{selectedTutor.currentStudents} / {selectedTutor.maxStudents}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Total Supervised:</span>
+                    <p className="font-medium">{selectedTutor.totalSupervised}</p>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-4 border-t">
+                  <Button variant="outline" onClick={() => setViewDialogOpen(false)}>Close</Button>
+                  <Button onClick={() => { setViewDialogOpen(false); handleEdit(selectedTutor); }}>
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Edit Tutor</DialogTitle>
+            </DialogHeader>
+            {selectedTutor && (
+              <form onSubmit={handleSaveEdit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-name">Name</Label>
+                  <Input
+                    id="edit-name"
+                    value={selectedTutor.name}
+                    onChange={(e) => setSelectedTutor({ ...selectedTutor, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-email">Email</Label>
+                    <Input
+                      id="edit-email"
+                      type="email"
+                      value={selectedTutor.email}
+                      onChange={(e) => setSelectedTutor({ ...selectedTutor, email: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-phone">Phone</Label>
+                    <Input
+                      id="edit-phone"
+                      value={selectedTutor.phone}
+                      onChange={(e) => setSelectedTutor({ ...selectedTutor, phone: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-department">Department</Label>
+                    <Input
+                      id="edit-department"
+                      value={selectedTutor.department}
+                      onChange={(e) => setSelectedTutor({ ...selectedTutor, department: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-specialty">Specialty</Label>
+                    <Input
+                      id="edit-specialty"
+                      value={selectedTutor.specialty}
+                      onChange={(e) => setSelectedTutor({ ...selectedTutor, specialty: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-maxStudents">Max Students</Label>
+                    <Input
+                      id="edit-maxStudents"
+                      type="number"
+                      value={selectedTutor.maxStudents}
+                      onChange={(e) => setSelectedTutor({ ...selectedTutor, maxStudents: parseInt(e.target.value) || 0 })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-status">Status</Label>
+                    <Select
+                      value={selectedTutor.status}
+                      onValueChange={(value: "active" | "inactive" | "on_leave") => setSelectedTutor({ ...selectedTutor, status: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                        <SelectItem value="on_leave">On Leave</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+                  <Button type="submit">Save Changes</Button>
+                </div>
+              </form>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Dialog */}
+        <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Add New Tutor</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleAddTutor} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="add-name">Name</Label>
+                <Input
+                  id="add-name"
+                  placeholder="Dr. Full Name"
+                  value={newTutor.name}
+                  onChange={(e) => setNewTutor({ ...newTutor, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="add-email">Email</Label>
+                  <Input
+                    id="add-email"
+                    type="email"
+                    placeholder="email@hospital.ma"
+                    value={newTutor.email}
+                    onChange={(e) => setNewTutor({ ...newTutor, email: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="add-phone">Phone</Label>
+                  <Input
+                    id="add-phone"
+                    placeholder="+212 6XX XXX XXX"
+                    value={newTutor.phone}
+                    onChange={(e) => setNewTutor({ ...newTutor, phone: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="add-department">Department</Label>
+                  <Input
+                    id="add-department"
+                    placeholder="e.g. Cardiology"
+                    value={newTutor.department}
+                    onChange={(e) => setNewTutor({ ...newTutor, department: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="add-specialty">Specialty</Label>
+                  <Input
+                    id="add-specialty"
+                    placeholder="e.g. Interventional Cardiology"
+                    value={newTutor.specialty}
+                    onChange={(e) => setNewTutor({ ...newTutor, specialty: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="add-maxStudents">Max Students</Label>
+                  <Input
+                    id="add-maxStudents"
+                    type="number"
+                    value={newTutor.maxStudents}
+                    onChange={(e) => setNewTutor({ ...newTutor, maxStudents: parseInt(e.target.value) || 0 })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="add-status">Status</Label>
+                  <Select
+                    value={newTutor.status}
+                    onValueChange={(value: "active" | "inactive" | "on_leave") => setNewTutor({ ...newTutor, status: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="on_leave">On Leave</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setAddDialogOpen(false)}>Cancel</Button>
+                <Button type="submit">Add Tutor</Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

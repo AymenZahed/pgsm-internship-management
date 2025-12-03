@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Search, Mail, Phone, Calendar, FileText, Eye } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const students = [
   {
@@ -55,6 +56,7 @@ const students = [
 
 export default function DoctorStudents() {
   const [searchQuery, setSearchQuery] = useState("");
+  const navigate = useNavigate();
 
   const filteredStudents = students.filter(student =>
     student.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -106,7 +108,12 @@ export default function DoctorStudents() {
             <h2 className="text-xl font-semibold">Active Students</h2>
             <div className="grid gap-4">
               {activeStudents.map((student) => (
-                <StudentCard key={student.id} student={student} />
+                <StudentCard 
+                  key={student.id} 
+                  student={student} 
+                  onViewLogbook={() => navigate("/doctor/logbook")}
+                  onViewDetails={() => navigate(`/doctor/students/${student.id}`)}
+                />
               ))}
             </div>
           </div>
@@ -118,7 +125,12 @@ export default function DoctorStudents() {
             <h2 className="text-xl font-semibold">Completed Rotations</h2>
             <div className="grid gap-4">
               {completedStudents.map((student) => (
-                <StudentCard key={student.id} student={student} />
+                <StudentCard 
+                  key={student.id} 
+                  student={student} 
+                  onViewLogbook={() => navigate("/doctor/logbook")}
+                  onViewDetails={() => navigate(`/doctor/students/${student.id}`)}
+                />
               ))}
             </div>
           </div>
@@ -128,7 +140,11 @@ export default function DoctorStudents() {
   );
 }
 
-function StudentCard({ student }: { student: typeof students[0] }) {
+function StudentCard({ student, onViewLogbook, onViewDetails }: { 
+  student: typeof students[0];
+  onViewLogbook: () => void;
+  onViewDetails: () => void;
+}) {
   return (
     <Card className="p-6 hover:shadow-md transition-shadow">
       <div className="flex flex-col lg:flex-row gap-6">
@@ -182,11 +198,11 @@ function StudentCard({ student }: { student: typeof students[0] }) {
           </div>
 
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="gap-1">
+            <Button variant="outline" size="sm" className="gap-1" onClick={onViewLogbook}>
               <FileText className="w-4 h-4" />
               Logbook
             </Button>
-            <Button variant="outline" size="sm" className="gap-1">
+            <Button variant="outline" size="sm" className="gap-1" onClick={onViewDetails}>
               <Eye className="w-4 h-4" />
               View
             </Button>

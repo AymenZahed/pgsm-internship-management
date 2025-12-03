@@ -5,17 +5,27 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Calendar, Plus, Check, Clock, FileText } from "lucide-react";
+import { Calendar, Plus, Check, Clock, FileText, Download } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
-const logbookEntries = [
+interface LogbookEntry {
+  id: string;
+  date: string;
+  activities: string;
+  skills: string;
+  reflections: string;
+  status: "approved" | "pending";
+}
+
+const initialEntries: LogbookEntry[] = [
   {
     id: "1",
     date: "2025-01-20",
     activities: "Observed pediatric consultations, participated in morning rounds",
     skills: "Patient examination, medical history taking",
     reflections: "Learned about common pediatric conditions and communication with children",
-    status: "approved" as const,
+    status: "approved",
   },
   {
     id: "2",
@@ -23,12 +33,92 @@ const logbookEntries = [
     activities: "Emergency department rotation, handled minor trauma cases",
     skills: "Wound suturing, vital signs assessment",
     reflections: "Developed confidence in emergency procedures",
-    status: "pending" as const,
+    status: "pending",
   },
 ];
 
 export default function Logbook() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [entries, setEntries] = useState<LogbookEntry[]>(initialEntries);
+  const [editingEntry, setEditingEntry] = useState<LogbookEntry | null>(null);
+  const [newEntry, setNewEntry] = useState({
+    date: new Date().toISOString().split('T')[0],
+    activities: "",
+    skills: "",
+    reflections: "",
+  });
+
+  const handleAddEntry = (e: React.FormEvent) => {
+    e.preventDefault();
+    const entry: LogbookEntry = {
+      id: Date.now().toString(),
+      ...newEntry,
+      status: "pending",
+    };
+    setEntries([entry, ...entries]);
+    setNewEntry({
+      date: new Date().toISOString().split('T')[0],
+      activities: "",
+      skills: "",
+      reflections: "",
+    });
+    setIsDialogOpen(false);
+    toast.success("Logbook entry added successfully");
+  };
+
+  const handleEditEntry = (entry: LogbookEntry) => {
+    setEditingEntry({ ...entry });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEntry) return;
+    
+    setEntries(entries.map(entry => 
+      entry.id === editingEntry.id ? { ...editingEntry, status: "pending" } : entry
+    ));
+    setIsEditDialogOpen(false);
+    setEditingEntry(null);
+    toast.success("Logbook entry updated successfully");
+  };
+
+  const handleExportPDF = (entry: LogbookEntry) => {
+    const content = `
+LOGBOOK ENTRY
+=============
+
+Date: ${new Date(entry.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+Status: ${entry.status === 'approved' ? 'Approved' : 'Pending Review'}
+
+ACTIVITIES
+----------
+${entry.activities}
+
+SKILLS PRACTICED
+----------------
+${entry.skills}
+
+REFLECTIONS
+-----------
+${entry.reflections}
+
+---
+Generated on: ${new Date().toLocaleString()}
+    `.trim();
+
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `logbook-entry-${entry.date}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success("Logbook entry exported");
+  };
 
   return (
     <AppLayout role="student" userName="Ahmed Benali">
@@ -49,14 +139,16 @@ export default function Logbook() {
               <DialogHeader>
                 <DialogTitle>Add Logbook Entry</DialogTitle>
               </DialogHeader>
-              <form className="space-y-4">
+              <form onSubmit={handleAddEntry} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="date">Date</Label>
                   <input
                     type="date"
                     id="date"
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    defaultValue={new Date().toISOString().split('T')[0]}
+                    value={newEntry.date}
+                    onChange={(e) => setNewEntry({ ...newEntry, date: e.target.value })}
+                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -65,6 +157,9 @@ export default function Logbook() {
                     id="activities"
                     placeholder="Describe your daily activities and procedures observed"
                     rows={3}
+                    value={newEntry.activities}
+                    onChange={(e) => setNewEntry({ ...newEntry, activities: e.target.value })}
+                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -73,6 +168,9 @@ export default function Logbook() {
                     id="skills"
                     placeholder="List the clinical skills you practiced"
                     rows={2}
+                    value={newEntry.skills}
+                    onChange={(e) => setNewEntry({ ...newEntry, skills: e.target.value })}
+                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -81,6 +179,9 @@ export default function Logbook() {
                     id="reflections"
                     placeholder="Your thoughts and learning points from today"
                     rows={3}
+                    value={newEntry.reflections}
+                    onChange={(e) => setNewEntry({ ...newEntry, reflections: e.target.value })}
+                    required
                   />
                 </div>
                 <div className="flex justify-end gap-2">
@@ -94,8 +195,68 @@ export default function Logbook() {
           </Dialog>
         </div>
 
+        {/* Edit Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Edit Logbook Entry</DialogTitle>
+            </DialogHeader>
+            {editingEntry && (
+              <form onSubmit={handleSaveEdit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-date">Date</Label>
+                  <input
+                    type="date"
+                    id="edit-date"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={editingEntry.date}
+                    onChange={(e) => setEditingEntry({ ...editingEntry, date: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-activities">Activities</Label>
+                  <Textarea
+                    id="edit-activities"
+                    rows={3}
+                    value={editingEntry.activities}
+                    onChange={(e) => setEditingEntry({ ...editingEntry, activities: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-skills">Skills Practiced</Label>
+                  <Textarea
+                    id="edit-skills"
+                    rows={2}
+                    value={editingEntry.skills}
+                    onChange={(e) => setEditingEntry({ ...editingEntry, skills: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-reflections">Reflections</Label>
+                  <Textarea
+                    id="edit-reflections"
+                    rows={3}
+                    value={editingEntry.reflections}
+                    onChange={(e) => setEditingEntry({ ...editingEntry, reflections: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" variant="hero">Save Changes</Button>
+                </div>
+              </form>
+            )}
+          </DialogContent>
+        </Dialog>
+
         <div className="space-y-4">
-          {logbookEntries.map((entry) => (
+          {entries.map((entry) => (
             <Card key={entry.id} className="p-6 hover:shadow-md transition-shadow">
               <div className="space-y-4">
                 <div className="flex items-start justify-between">
@@ -137,11 +298,24 @@ export default function Logbook() {
                 </div>
 
                 <div className="flex gap-2 pt-2">
-                  <Button variant="outline" size="sm" className="gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-2"
+                    onClick={() => handleEditEntry(entry)}
+                  >
                     <FileText className="w-4 h-4" />
                     Edit
                   </Button>
-                  <Button variant="outline" size="sm">Export PDF</Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-2"
+                    onClick={() => handleExportPDF(entry)}
+                  >
+                    <Download className="w-4 h-4" />
+                    Export PDF
+                  </Button>
                 </div>
               </div>
             </Card>

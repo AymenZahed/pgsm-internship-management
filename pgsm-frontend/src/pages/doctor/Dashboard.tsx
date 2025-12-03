@@ -155,7 +155,15 @@ export default function DoctorDashboard() {
                     {task.urgent && (
                       <Badge variant="destructive" className="animate-pulse-soft">Urgent</Badge>
                     )}
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        if (task.type === "attendance") navigate("/doctor/attendance");
+                        else if (task.type === "logbook") navigate("/doctor/logbook");
+                        else if (task.type === "evaluation") navigate("/doctor/evaluations");
+                      }}
+                    >
                       Take Action
                     </Button>
                   </div>

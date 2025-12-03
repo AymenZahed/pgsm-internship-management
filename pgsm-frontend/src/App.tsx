@@ -29,6 +29,7 @@ import StudentSettings from "./pages/student/Settings";
 import InternshipDetails from "./pages/student/InternshipDetails";
 import ApplyInternship from "./pages/student/ApplyInternship";
 
+
 // Hospital Pages
 import HospitalDashboard from "./pages/hospital/Dashboard";
 import HospitalProfile from "./pages/hospital/Profile";
@@ -55,6 +56,8 @@ import LogbookReview from "./pages/doctor/LogbookReview";
 import DoctorEvaluations from "./pages/doctor/Evaluations";
 import DoctorMessages from "./pages/doctor/Messages";
 import DoctorSettings from "./pages/doctor/Settings";
+import DoctorStudentDetails from "./pages/doctor/StudentDetails";
+
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -98,6 +101,7 @@ const App = () => (
           <Route path="/student/my-internships/:id" element={<MyInternshipDetails />} />
           <Route path="/student/logbook" element={<Logbook />} />
           <Route path="/student/attendance" element={<Attendance />} />
+          
           <Route path="/student/evaluations" element={<Evaluations />} />
           <Route path="/student/messages" element={<Messages />} />
           <Route path="/student/notifications" element={<Notifications />} />
@@ -125,7 +129,9 @@ const App = () => (
           <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
           <Route path="/doctor/profile" element={<DoctorProfile />} />
           <Route path="/doctor/students" element={<DoctorStudents />} />
+          <Route path="/doctor/students/:id" element={<DoctorStudentDetails />} />
           <Route path="/doctor/attendance" element={<AttendanceValidation />} />
+          
           <Route path="/doctor/logbook" element={<LogbookReview />} />
           <Route path="/doctor/evaluations" element={<DoctorEvaluations />} />
           <Route path="/doctor/messages" element={<DoctorMessages />} />
