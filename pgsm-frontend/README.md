@@ -1,76 +1,73 @@
-# PGSM Frontend
+# Welcome to your Lovable project
 
-Vue.js 3 frontend application for the PGSM Internship Management Platform.
+## Project info
 
-## Features
+**URL**: https://lovable.dev/projects/e9e0bd36-b4e6-4439-a329-41da222d97c3
 
-- ✅ User authentication (Login, Register, Password Reset)
-- ✅ Role-based access control (Admin, Hospital, Doctor, Student)
-- ✅ Dashboard for each user role
-- ✅ Responsive layout with sidebar navigation
-- ✅ Pinia state management
-- ✅ Vue Router with route guards
-- ✅ API integration with axios
+## How can I edit this code?
 
-## Setup
+There are several ways of editing your application.
 
-1. Install dependencies:
+**Use Lovable**
 
-```bash
-npm install
-```
+Simply visit the [Lovable Project](https://lovable.dev/projects/e9e0bd36-b4e6-4439-a329-41da222d97c3) and start prompting.
 
-2. Create a `.env` file in the root directory:
+Changes made via Lovable will be committed automatically to this repo.
 
-```env
-VITE_API_BASE_URL=http://localhost:3000/api
-```
+**Use your preferred IDE**
 
-3. Start the development server:
+If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
 
-```bash
+The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+
+Follow these steps:
+
+```sh
+# Step 1: Clone the repository using the project's Git URL.
+git clone <YOUR_GIT_URL>
+
+# Step 2: Navigate to the project directory.
+cd <YOUR_PROJECT_NAME>
+
+# Step 3: Install the necessary dependencies.
+npm i
+
+# Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
 
-The application will be available at `http://localhost:5173`
+**Edit a file directly in GitHub**
 
-## Project Structure
+- Navigate to the desired file(s).
+- Click the "Edit" button (pencil icon) at the top right of the file view.
+- Make your changes and commit the changes.
 
-```
-src/
-├── components/       # Reusable Vue components
-│   ├── common/      # Base components (Button, Input, etc.)
-│   └── layout/     # Layout components (Navbar, Sidebar, Footer)
-├── views/          # Page components
-│   ├── Public/     # Public pages (Login, Register)
-│   ├── Student/    # Student pages
-│   ├── Hospital/   # Hospital pages
-│   ├── Doctor/     # Doctor pages
-│   └── Admin/      # Admin pages
-├── router/         # Vue Router configuration
-├── store/          # Pinia stores
-├── services/       # API services
-└── utils/          # Utility functions
-```
+**Use GitHub Codespaces**
 
-## Available Scripts
+- Navigate to the main page of your repository.
+- Click on the "Code" button (green button) near the top right.
+- Select the "Codespaces" tab.
+- Click on "New codespace" to launch a new Codespace environment.
+- Edit files directly within the Codespace and commit and push your changes once you're done.
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint
-- `npm run format` - Format code with Prettier
+## What technologies are used for this project?
 
-## User Roles
+This project is built with:
 
-- **Student**: Browse internships, apply, track applications, manage logbook
-- **Hospital**: Post internships, manage applications, view students
-- **Doctor**: Validate logbooks, track attendance, evaluate students
-- **Admin**: Manage users, hospitals, view statistics and reports
+- Vite
+- TypeScript
+- React
+- shadcn-ui
+- Tailwind CSS
 
-## Notes
+## How can I deploy this project?
 
-- The frontend expects a backend API running on `http://localhost:3000/api`
-- Authentication uses JWT tokens stored in localStorage
-- Routes are protected based on user roles
-- The application uses Tailwind CSS for styling
+Simply open [Lovable](https://lovable.dev/projects/e9e0bd36-b4e6-4439-a329-41da222d97c3) and click on Share -> Publish.
+
+## Can I connect a custom domain to my Lovable project?
+
+Yes, you can!
+
+To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+
+Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)

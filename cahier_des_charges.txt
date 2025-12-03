@@ -1,0 +1,2186 @@
+CAHIER DES CHARGES - PLATEFORME DE
+GESTION DES STAGES MÉDICAUX (PGSM)
+INFORMATIONS GÉNÉRALES
+Élément
+
+Détail
+
+Version
+
+2.0
+
+Date
+
+10 Novembre 2025
+
+Commanditaire
+
+Faculté de Médecine
+
+Équipe
+
+4 développeurs full-stack
+
+Durée
+
+3 mois
+
+Budget
+
+12 000 USD
+
+1. CONTEXTE ET OBJECTIFS
+1.1 Problématique Actuelle
+Processus manuel : Gestion décentralisée des stages
+Délais longs : 8-12 semaines pour compléter un cycle
+Perte de documents : 15% des dossiers égarés
+Manque de traçabilité : Difficulté à suivre les candidatures
+Communication inefficace : Échanges par email non structurés
+
+1.2 Objectifs Stratégiques
+Digitalisation complète du processus
+Centralisation des données sur plateforme unique
+Automatisation de la sélection et affectation
+Amélioration du suivi pédagogique
+Optimisation de la répartition des étudiants
+
+1.3 Bénéfices Attendus
+Bénéfice
+
+Gain
+
+Impact
+
+Réduction temps administratif
+
+60%
+
+3 000 USD/an
+
+Diminution erreurs
+
+80%
+
+800 USD/an
+
+Élimination perte documents
+
+100%
+
+500 USD/an
+
+Amélioration communication
+
+70%
+
+1 200 USD/an
+
+ROI : 18 mois | Économie annuelle : 5 500 USD
+
+2. ACTEURS ET RÔLES
+2.1 Matrice des Acteurs
+Acteur
+
+Profil
+
+Fréquence
+
+Besoins Principaux
+
+Étudiant
+
+1ème-2ème-3ème-4ème-5ème6ème année
+
+Quotidienne
+
+Postuler, suivre
+candidatures, évaluations
+
+Établissement
+
+EPSP/Hôpitaux
+
+Hebdomadaire
+
+Publier offres, gérer
+candidatures
+
+Médecin
+Tuteur
+
+Encadrant
+
+Quotidienne
+
+Valider présences, évaluer
+
+Chef Service
+
+Responsable service
+
+Hebdomadaire
+
+Valider candidatures,
+supervision
+
+Administrateur
+
+Gestion plateforme
+
+Quotidienne
+
+Gérer comptes, rapports
+
+2.2 Responsabilités Détaillées
+Étudiant
+Consultation offres de stage avec filtres avancés
+Dépôt de candidatures en ligne (max 5 simultanées)
+Gestion du profil et documents (CV, relevés)
+Suivi en temps réel des candidatures
+Remplissage journal de bord numérique
+Consultation des évaluations et attestations
+Établissement Hospitalier
+
+Création et gestion des services médicaux
+Publication d'offres de stage paramétrables
+Réception et examen des candidatures
+Validation des affectations par service
+Consultation de statistiques d'accueil
+Gestion des médecins tuteurs
+Médecin Tuteur
+Validation des présences des stagiaires
+Remplissage des grilles d'évaluation
+Suivi de la progression pédagogique
+Communication avec les étudiants
+Consultation du journal de bord
+Alertes pour problèmes particuliers
+Chef de Service
+Validation finale des candidatures
+Supervision de l'encadrement
+Validation des évaluations finales
+Statistiques de performance du service
+Gestion des plages horaires de stage
+Administrateur Central
+Création et gestion de tous les comptes
+Supervision globale de la plateforme
+Génération de rapports et statistiques
+Configuration du système et paramètres
+Gestion des alertes et incidents
+Support aux utilisateurs
+
+3. FONCTIONNALITÉS PRINCIPALES
+3.1 Module Gestion des Comptes
+F1.1 - Création de Comptes
+Priorité : Critique
+
+Fonctionnalités :
+Création centralisée par l'administration
+Génération automatique mots de passe temporaires
+Validation des données et emails de confirmation
+Gestion des rôles et permissions granularisées
+Import batch via fichiers Excel
+Processus :
+1. Admin sélectionne type de compte
+2. Remplissage formulaire adapté au profil
+3. Validation automatique des données
+4. Génération identifiants et envoi email
+5. Activation compte avec premier login
+Données selon profil :
+Étudiant :
+Obligatoires : Nom, prénom, numéro inscription, email, téléphone, année, date naissance
+Optionnelles : Spécialité envisagée, adresse, contact urgence
+Médecin :
+Obligatoires : Nom, prénom, grade, spécialité, établissement, service, email pro, numéro ordre
+Optionnelles : Sous-spécialité, diplômes, CV
+F1.2 - Authentification Sécurisée
+Priorité : Critique
+Sécurité :
+Connexion multi-rôles avec redirection adaptée
+Protection force brute (blocage après 5 échecs)
+CAPTCHA après 3 tentatives échouées
+Sessions avec timeout 30 minutes
+Mot de passe oublié avec token sécurisé (1h)
+Règles mots de passe :
+Minimum 8 caractères
+1 majuscule, 1 minuscule, 1 chiffre, 1 caractère spécial
+Historique 5 derniers mots de passe
+Changement obligatoire tous les 6 mois
+
+F1.3 - Gestion des Profils
+Priorité : Importante
+Sections du profil :
+Informations personnelles (photo, coordonnées)
+Informations académiques/professionnelles
+Documents (CV, relevés, attestations)
+Préférences (notifications, langue)
+Sécurité (changement MDP, historique connexions)
+Taux de complétion :
+Calcul automatique basé sur champs remplis
+Obligation 100% pour postuler aux stages
+Indicateur visuel de progression
+
+3.2 Module Gestion des Stages
+F2.1 - Publication d'Offres
+Priorité : Critique
+Workflow de publication :
+1. Brouillon : Rédaction en cours
+2. Soumis : En attente validation admin
+3. Publié : Visible aux étudiants
+4. Complet : Toutes places pourvues
+5. Expiré : Date limite dépassée
+Informations de l'offre :
+Général : Titre, service, type, description
+Pédagogique : Objectifs, compétences visées
+Pratique : Dates, horaires, nombre places
+Conditions : Prérequis, documents requis
+Évaluation : Critères, mode validation
+Notifications automatiques :
+Aux étudiants correspondant aux critères
+Rappels 7 jours avant date limite
+Alerte établissement quand offre complète
+
+F2.2 - Consultation et Recherche
+Priorité : Critique
+Système de recherche :
+Barre recherche plein texte (titre, service, établissement)
+Filtres avancés : Localisation, service, type établissement, période, niveau
+Géolocalisation avec recherche par proximité
+Historique des recherches et favoris
+Affichage résultats :
+Vue cartes avec informations essentielles
+Vue liste pour comparaison rapide
+Vue carte géographique interactive
+Indicateurs : Nouveau, Urgent, Recommandé
+Recommandations personnalisées :
+Basées sur profil étudiant et historique
+Algorithmes de matching automatique
+Alertes pour nouvelles offres correspondantes
+F2.3 - Candidatures en Ligne
+Priorité : Critique
+Processus en 4 étapes :
+Étape 1 : Vérification prérequis
+Contrôle profil complet à 100%
+Vérification documents obligatoires
+Validation prérequis académiques
+Vérification limite 5 candidatures simultanées
+Étape 2 : Lettre de motivation
+Éditeur de texte enrichi intégré
+Compteur de mots (200-500 mots)
+Correcteur orthographique
+Templates prédéfinis disponibles
+Étape 3 : Documents à joindre
+Upload CV, relevés notes, attestation
+
+Validation formats (PDF uniquement)
+Contrôle taille fichiers (max 5 Mo chacun)
+Génération automatique lettre motivation PDF
+Étape 4 : Confirmation
+Récapitulatif complet candidature
+Cases à cocher obligations légales
+Validation et envoi définitif
+Email confirmation immédiat
+
+3.3 Module Suivi et Évaluation
+F3.1 - Journal de Bord Numérique
+Priorité : Critique
+Structure quotidienne :
+En-tête : Date, service, tuteur, thème du jour
+Activités : Liste déroulante activités types
+Cas cliniques : Grille de saisie structurée
+Compétences : Checklist gestes techniques
+Apprentissages : Zone texte libre réflexions
+Objectifs : Planification jour suivant
+Validation :
+Signature électronique étudiant
+Validation par tuteur avec commentaires
+Horodatage des validations
+Historique consultable et exportable
+F3.2 - Gestion des Présences
+Priorité : Critique
+Modes de pointage :
+QR Code : Génération quotidienne unique
+Validation manuelle : Par le tuteur
+Badge NFC : Phase 2 (optionnel)
+Informations enregistrées :
+
+Date et heure arrivée/départ
+Service et tuteur validant
+Statut (Présent, Absent, Retard, Congé)
+Justificatifs si absence
+Seuils et alertes :
+Avertissement à 3 absences non justifiées
+Alerte administration à 5 absences
+Signalement directeur à 10% d'absences
+F3.3 - Système d'Évaluation
+Priorité : Importante
+Types d'évaluation :
+Intermédiaire : À mi-parcours, focus adaptation
+Finale : Bilan complet, détermination validation
+Grilles standardisées :
+Domaine 1 - Compétences techniques (40%)
+Examen clinique complet
+Gestes techniques maîtrisés
+Prescription médicale
+Rédaction courrier
+Domaine 2 - Relations patients (25%)
+Communication et empathie
+Respect confidentialité
+Adaptation au public
+Domaine 3 - Travail équipe (20%)
+Collaboration équipe
+Respect hiérarchie
+Participation active
+Domaine 4 - Professionnalisme (15%)
+Ponctualité et assiduité
+Initiative et autonomie
+Auto-évaluation
+
+Échelle notation : 1-5 (Non acquis → Excellent)
+
+3.4 Module Communication
+F4.1 - Messagerie Interne
+Priorité : Importante
+Fonctionnalités :
+Envoi messages destinataires multiples
+Pièces jointes (max 10 Mo, formats variés)
+Accusés de lecture et priorisation
+Conversations de groupe par stage/service
+Recherche plein texte et historique
+Organisation :
+Dossiers personnalisables
+Étiquettes et filtres avancés
+Archives automatiques
+Templates messages courants
+Sécurité :
+Chiffrement des messages
+Journal d'audit des conversations
+Conservation 5 ans conformité RGPD
+F4.2 - Système de Notifications
+Priorité : Critique
+Canaux de notification :
+Email : Templates HTML responsives
+In-app : Système cloche avec compteur
+SMS : Alertes critiques uniquement
+Catégories :
+Étudiants :
+Nouvelles offres correspondant au profil
+Réponses candidatures
+Rappels pointage et évaluations
+
+Messages nouveaux tuteurs
+Tuteurs :
+Nouvelles candidatures à examiner
+Journaux de bord à valider
+Pointages en attente
+Échéances évaluation
+Administration :
+Seuils d'alerte (absences, retards)
+Rapports automatiques
+Demandes support
+Sauvegardes système
+
+3.5 Module Reporting
+F5.1 - Tableaux de Bord Personnalisés
+Priorité : Importante
+Dashboard Étudiant :
+Stages en cours et progression
+Performances moyennes et évolution
+Candidatures actives et statistiques
+Alertes et actions requises
+Dashboard Tuteur :
+Stagiaires actuels avec photos
+Pointages et évaluations en attente
+Activité du service et indicateurs qualité
+Graphiques de progression
+Dashboard Administration :
+Vue stratégique globale
+Alertes prioritaires à traiter
+Performances techniques plateforme
+Statistiques pédagogiques détaillées
+F5.2 - Génération de Rapports
+
+Priorité : Moyenne
+Rapports standards :
+Hebdomadaire : Activité, incidents, satisfaction
+Mensuel : Répartition stages, performances
+Annuel : Bilan complet, tendances, recommandations
+Rapports spécifiques :
+Établissements : Bilan accueil, occupation, qualité
+Chefs service : Performance stagiaires, charge tuteurs
+Ministère : Données agrégées, conformité
+Générateur personnalisé :
+Sélection données et visualisations
+Planification envois automatiques
+Export multiples formats (PDF, Excel, Word)
+Partage et collaboration
+
+4. SPÉCIFICATIONS TECHNIQUES
+4.1 Architecture Technique
+Stack Technologique Complète
+Composant
+
+Technologie
+
+Version
+
+Justification
+
+Backend
+
+PHP
+
+8.0+
+
+Performance, sécurité, communauté
+
+Frontend
+
+HTML5/CSS3/JS
+
+ES6+
+
+Compatibilité, accessibilité
+
+Framework CSS
+
+Bootstrap
+
+5.2+
+
+Responsive, composants riches
+
+Base de données
+
+MySQL
+
+8.0+
+
+Performance, fiabilité
+
+Serveur Web
+
+Apache
+
+2.4+
+
+Stabilité, modules
+
+Environnement Dev
+
+XAMPP
+
+Latest
+
+Simplicité déploiement
+
+4.2 Base de Données
+Schéma Principal
+
+Table users (Tous les utilisateurs)
+CREATE TABLE users (
+id INT PRIMARY KEY AUTO_INCREMENT,
+email VARCHAR(255) UNIQUE NOT NULL,
+password VARCHAR(255) NOT NULL,
+role ENUM('student', 'doctor', 'hospital', 'admin') NOT NULL,
+first_name VARCHAR(100) NOT NULL,
+last_name VARCHAR(100) NOT NULL,
+phone VARCHAR(20),
+status ENUM('active', 'inactive', 'suspended') DEFAULT 'active',
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+last_login TIMESTAMP NULL,
+profile_completion INT DEFAULT 0
+);
+Table students (Informations spécifiques étudiants)
+CREATE TABLE students (
+id INT PRIMARY KEY AUTO_INCREMENT,
+user_id INT NOT NULL,
+student_number VARCHAR(20) UNIQUE NOT NULL,
+birth_date DATE NOT NULL,
+birth_place VARCHAR(100),
+current_year INT NOT NULL,
+specialty VARCHAR(100),
+emergency_contact VARCHAR(100),
+FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+Table hospitals (Établissements de santé)
+CREATE TABLE hospitals (
+id INT PRIMARY KEY AUTO_INCREMENT,
+user_id INT NOT NULL,
+name VARCHAR(255) NOT NULL,
+type ENUM('EPSP', 'CHU', 'EHS', 'CLINIC') NOT NULL,
+address TEXT NOT NULL,
+city VARCHAR(100) NOT NULL,
+postal_code VARCHAR(10),
+phone VARCHAR(20),
+accreditation_number VARCHAR(50) UNIQUE,
+
+director_name VARCHAR(100),
+FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+Table services (Services médicaux)
+CREATE TABLE services (
+id INT PRIMARY KEY AUTO_INCREMENT,
+hospital_id INT NOT NULL,
+name VARCHAR(100) NOT NULL,
+specialty VARCHAR(100) NOT NULL,
+capacity INT NOT NULL,
+chief_id INT,
+status ENUM('active', 'inactive') DEFAULT 'active',
+FOREIGN KEY (hospital_id) REFERENCES hospitals(id) ON DELETE CASCADE,
+FOREIGN KEY (chief_id) REFERENCES users(id) ON DELETE SET NULL
+);
+Table stage_offers (Offres de stage)
+CREATE TABLE stage_offers (
+id INT PRIMARY KEY AUTO_INCREMENT,
+service_id INT NOT NULL,
+title VARCHAR(255) NOT NULL,
+description TEXT NOT NULL,
+start_date DATE NOT NULL,
+end_date DATE NOT NULL,
+application_deadline DATE NOT NULL,
+available_spots INT NOT NULL,
+requirements TEXT,
+status ENUM('draft', 'pending', 'published', 'closed') DEFAULT 'draft
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE
+);
+Table applications (Candidatures)
+CREATE TABLE applications (
+id INT PRIMARY KEY AUTO_INCREMENT,
+student_id INT NOT NULL,
+stage_offer_id INT NOT NULL,
+motivation_letter TEXT NOT NULL,
+
+status ENUM('submitted', 'under_review', 'accepted', 'rejected') DEFA
+submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+reviewed_at TIMESTAMP NULL,
+FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+FOREIGN KEY (stage_offer_id) REFERENCES stage_offers(id) ON DELETE CA
+);
+
+4.3 Sécurité
+Authentification et Autorisation
+Sécurité des mots de passe :
+// Hashage avec bcrypt
+$hashed_password = password_hash($password, PASSWORD_DEFAULT, ['cost' =>
+// Vérification
+if (password_verify($input_password, $hashed_password)) {
+// Connexion réussie
+$_SESSION['user_id'] = $user['id'];
+$_SESSION['user_role'] = $user['role'];
+$_SESSION['login_time'] = time();
+}
+Protection CSRF :
+// Génération token
+$_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+// Validation formulaire
+if (!hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+die('Token CSRF invalide');
+}
+Validation des données :
+function sanitize_input($data) {
+$data = trim($data);
+$data = stripslashes($data);
+$data = htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+return $data;
+
+}
+function validate_email($email) {
+return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+}
+
+4.4 Performance et Évolutivité
+Objectifs de Performance
+Métrique
+
+Cible
+
+Seuil Alerte
+
+Surveillance
+
+Temps réponse pages
+
+< 2s
+
+> 3s
+
+Monitoring continu
+
+Disponibilité
+
+99.9%
+
+< 99%
+
+Ping toutes les 5min
+
+Utilisateurs simultanés
+
+50+
+
+80% capacité
+
+Logs connexions
+
+Taille BDD
+
+< 500MB
+
+> 400MB
+
+Surveillance espace
+
+Upload fichiers
+
+< 30s
+
+> 60s
+
+Timing opérations
+
+Optimisations Implémentées
+Base de données :
+Indexation sur champs de recherche fréquents
+Requêtes préparées pour prévention injections
+Cache des résultats de requêtes répétitives
+Archivage automatique des données anciennes
+Frontend :
+Compression images et assets
+Mise en cache navigateur
+Chargement différé images
+Minimification CSS/JS
+Upload fichiers :
+Validation type et taille côté client et serveur
+Compression automatique images
+Stockage cloud pour fichiers volumineux
+Nettoyage automatique fichiers temporaires
+
+5. INTERFACE UTILISATEUR
+5.1 Design System
+Palette de Couleurs
+Couleur
+
+Usage
+
+Code HEX
+
+Variables CSS
+
+Primaire
+
+Actions principales
+
+#2563eb
+
+--primary-color
+
+Secondaire
+
+Validation, succès
+
+#16a34a
+
+--success-color
+
+Danger
+
+Alertes, erreurs
+
+#dc2626
+
+--danger-color
+
+Avertissement
+
+Warnings
+
+#d97706
+
+--warning-color
+
+Info
+
+Informations
+
+#0369a1
+
+--info-color
+
+Neutre foncé
+
+Texte
+
+#1f2937
+
+--text-dark
+
+Neutre clair
+
+Arrière-plans
+
+#f8fafc
+
+--bg-light
+
+Typographie
+Élément
+
+Police
+
+Taille
+
+Poids
+
+Couleur
+
+Titre h1
+
+System UI
+
+2.5rem
+
+700
+
+--text-dark
+
+Titre h2
+
+System UI
+
+2rem
+
+600
+
+--text-dark
+
+Titre h3
+
+System UI
+
+1.75rem
+
+600
+
+--text-dark
+
+Corps texte
+
+System UI
+
+1rem
+
+400
+
+--text-dark
+
+Labels
+
+System UI
+
+0.875rem
+
+500
+
+--text-dark
+
+Boutons
+
+System UI
+
+1rem
+
+500
+
+Blanc
+
+Liens
+
+System UI
+
+1rem
+
+500
+
+--primary-color
+
+5.2 Composants d'Interface
+Navigation Principale
+Header : Logo, navigation principale, profil utilisateur
+Sidebar : Navigation secondaire selon rôle (réductible)
+Breadcrumb : Fil d'Ariane pour navigation hiérarchique
+Footer : Liens légaux, contact, informations
+
+Composants Communs
+Cartes : Affichage informations groupées
+Tableaux : Données tabulaires avec tri et pagination
+Formulaires : Validation en temps réel, messages d'erreur
+Modales : Actions contextuelles sans changement de page
+Alertes : Messages feedback utilisateur (succès, erreur, warning)
+
+5.3 Pages Clés
+Page de Connexion
+Formulaire centré avec validation
+Lien mot de passe oublié
+Rappel sécurité (verrouillage après 5 échecs)
+Redirection automatique selon rôle
+Dashboard Étudiant
+En-tête : Bienvenue, indicateur profil complétion
+Section candidatures : Statut candidatures en cours
+Section offres : Offres recommandées avec filtres rapides
+Section stages : Stages en cours et à venir
+Section actions : Actions requises (documents, validations)
+Dashboard Établissement
+Vue synthétique : Statistiques accueil, candidatures
+Gestion offres : Liste offres avec statuts
+Candidatures : Tableau candidatures avec actions
+Services : Gestion services et capacités
+Rapports : Statistiques performance établissement
+Dashboard Administration
+Supervision : Métriques plateforme, alertes
+Gestion utilisateurs : Recherche, création, modification
+Configuration : Paramètres système, notifications
+Rapports : Génération et planification rapports
+Support : Tickets support, documentation
+
+5.4 Responsive Design
+
+Breakpoints Bootstrap
+Device
+
+Breakpoint
+
+Caractéristiques
+
+Mobile
+
+< 576px
+
+Navigation hamburger, contenu empilé
+
+Tablette
+
+≥ 768px
+
+Sidebar réduite, layout adaptatif
+
+Desktop
+
+≥ 992px
+
+Layout complet avec sidebar
+
+Large
+
+≥ 1200px
+
+Layout étendu, plus d'informations
+
+Adaptations Spécifiques
+Mobile :
+Menu hamburger avec overlay
+Tableaux avec scroll horizontal
+Boutons taille adaptative tactile
+Formulaire champs empilés
+Tablette :
+Navigation latérale réduite
+Cartes en grille 2 colonnes
+Actions contextuelles dans modales
+Desktop :
+Navigation latérale complète
+Multi-colonnes et grilles complexes
+Actions inline dans tableaux
+
+6. PLAN DE DÉPLOIEMENT
+6.1 Phases de Développement (8 semaines)
+Phase 1 : Fondations (Semaines 1-2)
+Tâche
+Configuration
+environnement
+
+Sous-tâches
+Installation stack, IDE, Git
+
+Responsable
+Équipe
+technique
+
+Livrable
+Environnement dev
+opérationnel
+
+Tâche
+
+Sous-tâches
+
+Responsable
+
+Livrable
+
+Architecture MVC
+
+Structure dossiers,
+routing base
+
+Développeurs
+
+Architecture de base
+
+Système
+authentification
+
+Login, sessions, rôles
+
+Développeurs
+
+Connexion sécurisée
+
+Base de données
+
+Schéma, modèles,
+connexion
+
+Développeurs
+
+Modèles PHP
+opérationnels
+
+Livrable Phase 1 : Application de base avec authentification fonctionnelle
+Phase 2 : Gestion Utilisateurs (Semaines 3-4)
+Tâche
+
+Sous-tâches
+
+Responsable
+
+Livrable
+
+CRUD
+utilisateurs
+
+Profils étudiants, médecins,
+établissements
+
+Développeurs
+
+Gestion complète profils
+
+Upload
+documents
+
+Système fichiers, validation
+
+Développeurs
+
+Upload sécurisé
+
+Interface profil
+
+Pages édition, visualisation
+
+Designer +
+Dev
+
+Interface utilisateur
+complète
+
+Permissions
+
+Contrôle accès granularisé
+
+Développeurs
+
+Système de permissions
+
+Livrable Phase 2 : Gestion complète des utilisateurs et profils
+Phase 3 : Modules Stages (Semaines 5-6)
+Tâche
+
+Sous-tâches
+
+Responsable
+
+Livrable
+
+Publication offres
+
+Workflow complet publication
+
+Développeurs
+
+Système offres
+
+Candidatures
+
+Processus postulation
+
+Développeurs
+
+Candidatures en ligne
+
+Recherche
+
+Moteur recherche, filtres
+
+Développeurs
+
+Recherche avancée
+
+Notifications
+
+Système alertes email/in-app
+
+Développeurs
+
+Notifications automatiques
+
+Livrable Phase 3 : Système complet de gestion des stages et candidatures
+Phase 4 : Finalisation (Semaines 7-8)
+Tâche
+Tableaux de
+bord
+
+Sous-tâches
+Vues personnalisées par rôle
+
+Responsable
+Développeurs
+
+Livrable
+Dashboards
+
+Tâche
+
+Sous-tâches
+
+Responsable
+
+Livrable
+
+Reporting
+
+Génération rapports, statistiques
+
+Développeurs
+
+Module reporting
+
+Tests validation
+
+Tests fonctionnels, sécurité
+
+Équipe complète
+
+Application testée
+
+Documentation
+
+Guide utilisateur, technique
+
+Équipe complète
+
+Documentation complète
+
+Livrable Phase 4 : Application finale livrée et documentée
+
+6.2 Environnements
+Développement
+Serveur : XAMPP/Laragon local
+Base de données : MySQL local
+Accès : Équipe développement uniquement
+Backup : Git + exports manuels
+Recette
+Serveur : Hébergement test dédié
+Base de données : Copie production anonymisée
+Accès : Équipe + utilisateurs tests
+Validation : Tests utilisateurs réels
+Production
+Serveur : Hébergement mutualisé performant
+Base de données : MySQL optimisé
+Sécurité : SSL, firewall, monitoring
+Sauvegarde : Automatique quotidienne
+
+6.3 Procédure Déploiement
+Pré-déploiement
+1. Tests complets sur environnement recette
+2. Sauvegarde production actuelle
+3. Communication maintenance aux utilisateurs
+4. Vérification checklist déploiement
+Déploiement
+
+1. Mode maintenance activé
+2. Sauvegarde base de données
+3. Transfert nouveaux fichiers
+4. Mise à jour base de données
+5. Tests rapides fonctionnalités critiques
+6. Désactivation mode maintenance
+Post-déploiement
+1. Monitoring renforcé 24h
+2. Support prioritaire pour problèmes
+3. Collecte feedback utilisateurs
+4. Documentation modifications apportées
+
+7. MAINTENANCE ET SUPPORT
+7.1 Maintenance Courante
+Tâches Récurrentes
+Tâche
+
+Fréquence
+
+Responsable
+
+Automatisation
+
+Sauvegardes BDD
+
+Quotidienne
+
+Admin système
+
+Script automatique
+
+Surveillance logs
+
+Quotidienne
+
+Équipe technique
+
+Alertes automatiques
+
+Mises à jour sécurité
+
+Mensuelle
+
+Développeurs
+
+Revue manuelle
+
+Nettoyage fichiers
+
+Hebdomadaire
+
+Système
+
+Script automatique
+
+Vérification performance
+
+Trimestrielle
+
+Équipe technique
+
+Tests manuels
+
+Maintenance Préventive
+Base de données :
+Optimisation tables hebdomadaire
+Vérification index mensuelle
+Archivage données anciennes trimestrielle
+Revue performances requêtes mensuelle
+Sécurité :
+Audit logs sécurité hebdomadaire
+
+Revue permissions mensuelle
+Test vulnérabilités trimestriel
+Mise à jour dépendances mensuelle
+
+7.2 Support Utilisateurs
+Niveaux de Support
+Niveau
+
+Temps réponse
+
+Canaux
+
+Responsable
+
+Urgent
+
+2 heures
+
+Téléphone, SMS
+
+Équipe technique
+
+Normal
+
+24 heures
+
+Email, tickets
+
+Support dédié
+
+Information
+
+48 heures
+
+Documentation, FAQ
+
+Documentation
+
+Processus Support
+1. Réception demande : Canal approprié selon urgence
+2. Tri et priorisation : Selon impact et urgence
+3. Résolution : Par ressource appropriée
+4. Suivi : Jusqu'à satisfaction utilisateur
+5. Amélioration : Documentation solution pour réutilisation
+
+7.3 Formation Utilisateurs
+Plans de Formation
+Administrateurs :
+Durée : 1 journée
+Contenu : Gestion complète plateforme, reporting, sécurité
+Support : Guide administrateur, sessions pratiques
+Établissements :
+Durée : 3 heures
+Contenu : Publication offres, gestion candidatures, statistiques
+Support : Vidéos tutoriels, guide utilisateur
+Médecins tuteurs :
+Durée : 2 heures
+Contenu : Validation présences, évaluations, communication
+Support : Fiches pratiques, démonstrations
+
+Étudiants :
+Durée : 1 heure
+Contenu : Candidatures, suivi, documents
+Support : Guide étudiant, FAQ interactive
+
+7.4 Évolutions Futures
+Roadmap Phase 2 (6-12 mois)
+Fonctionnalité
+
+Priorité
+
+Estimation
+
+Bénéfice
+
+Application mobile
+
+Élevée
+
+3 mois
+
+Accessibilité terrain
+
+Signature électronique
+
+Élevée
+
+1 mois
+
+Dématérialisation complète
+
+Visioconférence intégrée
+
+Moyenne
+
+2 mois
+
+Entretiens à distance
+
+API RESTful externe
+
+Moyenne
+
+1 mois
+
+Intégration systèmes existants
+
+Analytics avancés
+
+Faible
+
+2 mois
+
+Décisionnel amélioré
+
+Améliorations Continues
+Performance :
+Optimisation requêtes base de données
+Mise en cache avancée
+Compression assets
+CDN pour ressources statiques
+Expérience utilisateur :
+Interface plus intuitive
+Personnalisation avancée
+Accessibilité améliorée
+Support multi-langues
+Fonctionnalités :
+Workflows personnalisables
+Intégration calendrier
+Notifications push
+Collaboration en temps réel
+
+8. GESTION DES RISQUES
+8.1 Risques Identifiés
+Risques Techniques
+Risque
+
+Impact
+
+Probabilité
+
+Mesures de Mitigation
+
+Performance base de
+données
+
+Moyen
+
+Faible
+
+Indexation, optimisation requêtes, monitoring
+
+Sécurité des données
+
+Élevé
+
+Moyen
+
+Validation stricte, PDO, audits réguliers
+
+Compatibilité navigateurs
+
+Faible
+
+Moyen
+
+Tests multi-navigateurs, Bootstrap, fallbacks
+
+Panne serveur
+
+Élevé
+
+Faible
+
+Hébergement professionnel, sauvegardes,
+monitoring
+
+Espace disque insuffisant
+
+Moyen
+
+Faible
+
+Surveillance automatique, alertes, nettoyage
+
+Mesures de Mitigation
+
+Risques Fonctionnels
+Risque
+
+Impact
+
+Probabilité
+
+Complexité gestion rôles
+
+Moyen
+
+Élevé
+
+Architecture claire, documentation, formation
+
+Charge upload fichiers
+
+Moyen
+
+Moyen
+
+Limitations taille, types autorisés, compression
+
+Adoption utilisateurs
+
+Élevé
+
+Moyen
+
+Interface intuitive, formation, support réactif
+
+Changement besoins
+
+Moyen
+
+Élevé
+
+Méthodologie agile, revues régulières, flexibilité
+
+Charge pic utilisateurs
+
+Moyen
+
+Faible
+
+Architecture scalable, cache, optimisation
+
+Impact
+
+Probabilité
+
+Dépassement délais
+
+Moyen
+
+Moyen
+
+Planning réaliste, suivi rigoureux, buffers
+
+Dépassement budget
+
+Moyen
+
+Faible
+
+Contrôle régulier, réserves, prioritisation
+
+Turnover équipe
+
+Élevé
+
+Faible
+
+Documentation, connaissances partagées,
+recouvrement
+
+Résistance au
+changement
+
+Moyen
+
+Moyen
+
+Communication, formation, implication
+utilisateurs
+
+Risques Organisationnels
+Risque
+
+8.2 Plan de Contingence
+
+Mesures de Mitigation
+
+Sauvegardes et Récupération
+Sauvegardes automatiques :
+Base de données : Quotidienne complète + incrémentales 4h
+Fichiers uploadés : Quotidienne synchronisation cloud
+Code source : Versioning Git avec branches protection
+Configuration : Export automatique paramètres
+Procédure de restauration :
+1. Évaluation incident : Impact, cause, données affectées
+2. Activation mode maintenance : Notification utilisateurs
+3. Restauration sauvegarde : Base + fichiers selon besoin
+4. Vérification intégrité : Tests fonctionnels complets
+5. Désactivation maintenance : Reprise activité normale
+Temps objectif de restauration :
+Données critiques : < 4 heures
+Application complète : < 8 heures
+Données anciennes : < 24 heures
+Communication de Crise
+Canaux de communication :
+Utilisateurs : Email, notifications in-app, page statut
+Équipe technique : Slack, SMS, téléphone
+Direction : Réunions urgentes, rapports réguliers
+Messages types :
+Maintenance planifiée : 7 jours à l'avance, rappel 24h avant
+Incident critique : Notification immédiate, updates horaires
+Résolution incident : Confirmation résolution, mesures préventives
+
+8.3 Mesures Préventives
+Surveillance Continue
+Monitoring technique :
+Disponibilité application : Ping toutes les 5 minutes
+Performance : Temps réponse, utilisation ressources
+
+Sécurité : Tentatives connexion, activités suspectes
+Capacité : Espace disque, mémoire, bande passante
+Indicateurs fonctionnels :
+Satisfaction utilisateurs : Surveys régulières
+Utilisation fonctionnalités : Analytics détaillés
+Performance processus : Temps traitement, taux succès
+Support : Temps réponse, taux résolution
+Amélioration Continue
+Revues régulières :
+Hebdomadaire : Progression, problèmes techniques
+Mensuelle : Satisfaction utilisateurs, performance
+Trimestrielle : Objectifs stratégiques, améliorations
+Annuelle : Bilan complet, planification future
+Processus feedback :
+Suggestions utilisateurs : Formulaire dédié, analyse régulière
+Bug reports : Système de tickets, priorisation
+Améliorations : Backlog priorisé, planification releases
+
+9. CRITÈRES DE VALIDATION
+9.1 Tests Fonctionnels
+Scénarios de Test Principaux
+Scénario
+
+Critères de Succès
+
+Responsable
+
+Connexion tous rôles
+
+Accès dashboard approprié, permissions respectées
+
+Équipe QA
+
+Gestion comptes admin
+
+Création/modification/suppression tous profils
+
+Équipe QA
+
+Publication offre stage
+
+Workflow complet brouillon → publié → candidatures
+
+Équipe QA
+
+Candidature étudiant
+
+Processus 4 étapes, validation prérequis, notifications
+
+Équipe QA
+
+Évaluation médecin
+
+Grilles complétion, calcul notes, validation
+
+Équipe QA
+
+Reporting administration
+
+Génération rapports, exports, statistiques
+
+Équipe QA
+
+Cas de Test Critiques
+Authentification :
+Connexion avec identifiants valides
+Blocage après 5 tentatives échouées
+Récupération mot de passe oublié
+Redirection selon rôle après connexion
+Timeout session après 30 minutes inactivité
+Gestion données :
+Validation formats fichiers upload
+Protection contre injections SQL
+Échappement XSS sur sorties
+Intégrité relations base de données
+Sauvegarde et restauration données
+
+9.2 Tests Techniques
+Performance
+Métrique
+
+Cible
+
+Méthode Test
+
+Outils
+
+Temps réponse pages
+
+< 2 secondes
+
+Tests charge simulateurs
+
+Lighthouse, GTmetrix
+
+Utilisateurs simultanés
+
+50+
+
+Tests charge progressive
+
+Apache JMeter
+
+Requêtes base données
+
+< 100ms
+
+Monitoring requêtes lentes
+
+MySQL Slow Query Log
+
+Upload fichiers
+
+< 30s
+
+Tests fichiers tailles variables
+
+Tests manuels
+
+Disponibilité
+
+99.9%
+
+Monitoring continu 24/7
+
+UptimeRobot
+
+Sécurité
+Test
+
+Méthodologie
+
+Résultat Attendu
+
+Outils
+
+Injection SQL
+
+Entrées malveillantes
+formulaires
+
+Aucune vulnérabilité
+
+SQLMap, tests manuels
+
+XSS
+
+Scripts dans champs
+utilisateur
+
+Échappement
+correct
+
+Scan automatique,
+manuel
+
+CSRF
+
+Requêtes sans tokens valides
+
+Rejet des requêtes
+
+Tests manuels
+
+Authentification
+
+Tests force brute
+
+Blocage après 5
+échecs
+
+Tests automatiques
+
+Test
+Permissions
+
+Méthodologie
+Accès non autorisés
+
+Résultat Attendu
+Redirection page
+erreur
+
+9.3 Tests d'Acceptation Utilisateur
+Groupes de Test
+Administrateurs (3 personnes) :
+Tâches : Gestion utilisateurs, configuration, reporting
+Critères : Efficacité, complétude fonctionnalités
+Durée : 2 sessions de 3 heures
+Établissements (5 personnes) :
+Tâches : Publication offres, gestion candidatures
+Critères : Simplicité, gain de temps mesuré
+Durée : 1 session de 4 heures
+Médecins tuteurs (5 personnes) :
+Tâches : Validation présences, évaluations
+Critères : Accessibilité, rapidité d'exécution
+Durée : 1 session de 2 heures
+Étudiants (10 personnes) :
+Tâches : Candidatures, suivi, documents
+Critères : Intuitivité, satisfaction globale
+Durée : 1 session de 2 heures
+Critères de Satisfaction
+Questionnaire de satisfaction :
+Facilité d'utilisation (1-5)
+Gain de temps perçu (1-5)
+Fiabilité perçue (1-5)
+Recommandation à d'autres (1-5)
+Commentaires et suggestions libres
+Seuil d'acceptation :
+Score moyen global ≥ 4/5
+
+Outils
+Tests manuels rôles
+
+Aucune fonctionnalité critique < 3/5
+80% des utilisateurs recommandent la plateforme
+
+9.4 Documentation de Validation
+Rapport de Tests
+Section technique :
+Résultats performance détaillés
+Vulnérabilités sécurité identifiées et corrigées
+Compatibilité navigateurs validée
+Procédures sauvegarde/restauration testées
+Section fonctionnelle :
+Couverture tests par module
+Bugs identifiés et statut résolution
+Écarts spécifications/implémentation
+Recommandations améliorations
+Section utilisateur :
+Résultats tests d'acceptation
+Feedback utilisateurs détaillé
+Mesures satisfaction globales
+Plan formation et déploiement
+
+10. BUDGET ET RESSOURCES
+10.1 Budget Détaillé
+Répartition par Poste
+Poste
+
+Montant (USD)
+
+Pourcentage
+
+Justification
+
+Développement
+
+8 000
+
+66.7%
+
+4 développeurs × 2 mois
+
+Infrastructure
+
+2 000
+
+16.7%
+
+Hébergement, domaines, SSL
+
+Formation
+
+1 000
+
+8.3%
+
+Matériel formation, déplacements
+
+Documentation
+
+500
+
+4.2%
+
+Rédaction, design supports
+
+Poste
+
+Montant (USD)
+
+Pourcentage
+
+Contingence
+
+500
+
+4.1%
+
+TOTAL
+
+12 000
+
+100%
+
+Justification
+Imprévus, ajustements
+
+Détail Développement
+Phase
+
+Charge (hommes/jours)
+
+Coût (USD)
+
+Livrables
+
+Phase 1
+
+40 jours
+
+2 000
+
+Architecture, authentification
+
+Phase 2
+
+40 jours
+
+2 000
+
+Gestion utilisateurs, profils
+
+Phase 3
+
+40 jours
+
+2 000
+
+Modules stages, candidatures
+
+Phase 4
+
+40 jours
+
+2 000
+
+Finalisation, tests, documentation
+
+SOUS-TOTAL
+
+160 jours
+
+8 000
+
+10.2 Équipe Projet
+Composition Équipe
+Rôle
+
+Nombre
+
+Expérience
+
+Responsabilités
+
+Chef de projet
+
+1
+
+5+ ans gestion
+projets TI
+
+Coordination, planning, communication
+client
+
+Développeur
+senior
+
+2
+
+3+ ans PHP/MySQL
+
+Architecture, développement complexe,
+revue code
+
+Développeur
+junior
+
+2
+
+1+ ans web
+
+Développement fonctionnalités, tests,
+documentation
+
+Designer UX/UI
+
+0.5 (temps
+partiel)
+
+3+ ans design web
+
+Maquettes, expérience utilisateur,
+responsive
+
+Admin système
+
+0.5 (temps
+partiel)
+
+3+ ans infra web
+
+Déploiement, monitoring, sauvegardes
+
+Planning de Disponibilité
+Rôle
+
+Semaines 1-4
+
+Semaines 5-8
+
+Post-livraison
+
+Chef de projet
+
+100%
+
+100%
+
+20% (support)
+
+Développeurs
+
+100%
+
+100%
+
+10% (correctifs)
+
+Designer
+
+50%
+
+25%
+
+0%
+
+Rôle
+
+Semaines 1-4
+
+Admin système
+
+25%
+
+Semaines 5-8
+
+Post-livraison
+
+50%
+
+10% (maintenance)
+
+10.3 Ressources Techniques
+Infrastructure
+Ressource
+
+Spécifications
+
+Coût
+
+Fournisseur
+
+Hébergement web
+
+2 CPU, 4GB RAM, 100GB SSD
+
+40 USD/mois
+
+Hostinger/OVH
+
+Base de données
+
+MySQL 8.0, 1GB RAM
+
+Inclus hébergement
+
+-
+
+Nom de domaine
+
+pgsm-univ.dz
+
+15 USD/an
+
+Registrar
+
+SSL certificat
+
+Let's Encrypt
+
+Gratuit
+
+-
+
+Sauvegarde cloud
+
+50GB espace
+
+5 USD/mois
+
+Backblaze
+
+Monitoring
+
+Surveillance uptime
+
+10 USD/mois
+
+UptimeRobot
+
+Logiciels et Outils
+Outil
+
+Usage
+
+Coût
+
+Alternatives
+
+Visual Studio Code
+
+Développement
+
+Gratuit
+
+PHPStorm
+
+Git/GitHub
+
+Versioning
+
+Gratuit
+
+GitLab
+
+Trello
+
+Gestion projet
+
+Gratuit
+
+Asana, Jira
+
+Slack
+
+Communication équipe
+
+Gratuit
+
+Teams, Discord
+
+Figma
+
+Design maquettes
+
+Gratuit
+
+Adobe XD
+
+XAMPP
+
+Environnement dev
+
+Gratuit
+
+WAMP, Laragon
+
+10.4 Retour sur Investissement
+Analyse Coûts-Bénéfices
+Coûts année 1 :
+Développement : 12 000 USD
+Infrastructure année : 720 USD
+Total année 1 : 12 720 USD
+Économies année 1 :
+
+Réduction temps administratif : 3 000 USD
+Diminution erreurs : 800 USD
+Élimination perte documents : 500 USD
+Amélioration communication : 1 200 USD
+Total économies année 1 : 5 500 USD
+Économies années suivantes :
+Année 2 : 5 500 USD (coût maintenance 1 200 USD)
+Année 3 : 5 500 USD (coût maintenance 1 200 USD)
+ROI calcul :
+Période amortissement : 12 720 USD / 5 500 USD = 2.3 ans
+ROI 3 ans : (16 500 USD - 15 120 USD) / 15 120 USD = 9.1%
+Bénéfices Qualitatifs
+Pédagogiques :
+Amélioration qualité formation pratique
+Meilleur suivi compétences acquises
+Harmonisation des évaluations
+Suivi longitudinal progression étudiants
+Administratifs :
+Réduction charge travail administrative
+Gain temps traitement candidatures
+Élimination erreurs saisie manuelle
+Automatisation tâches répétitives
+Stratégiques :
+Modernisation système gestion académique
+Renforcement partenariats université-hôpital
+Préparation accréditation internationale
+Amélioration image institution
+
+11. CONCLUSION
+11.1 Synthèse du Projet
+
+La Plateforme de Gestion des Stages Médicaux (PGSM) représente une avancée majeure dans la
+digitalisation des processus de gestion des stages hospitaliers. En centralisant l'ensemble des
+opérations sur une plateforme unique et sécurisée, elle adresse les principales problématiques
+identifiées dans le processus actuel.
+
+11.2 Valeur Ajoutée
+Pour les étudiants :
+Accès 24/7 aux offres de stage avec recherche avancée
+Suivi en temps réel des candidatures et évaluations
+Communication directe avec les tuteurs
+Historique complet du parcours de stages
+Pour les établissements hospitaliers :
+Publication rapide et simple des offres
+Réception automatisée et gestion des candidatures
+Statistiques d'accueil et de performance
+Réduction significative du temps de traitement
+Pour l'administration :
+Vision globale en temps réel de tous les stages
+Génération automatique de rapports réglementaires
+Réduction des tâches administratives répétitives
+Conformité réglementaire garantie
+
+11.3 Facteurs de Succès
+Critiques :
+Implication des utilisateurs finaux dans la conception
+Respect des délais et budget définis
+Qualité technique et sécurité des données
+Formation adéquate de tous les utilisateurs
+Clés :
+Interface intuitive et adaptée à chaque profil
+Performance et disponibilité de la plateforme
+Support réactif et documentation complète
+Processus d'amélioration continue
+
+11.4 Perspectives
+Court terme (livraison) :
+Déploiement progressif avec accompagnement
+Formation de tous les utilisateurs
+Support renforcé pendant les premiers mois
+Collecte active des retours pour améliorations
+Moyen terme (6-12 mois) :
+Analyse d'impact et mesure des bénéfices
+Développement des fonctionnalités Phase 2
+Optimisation continue based sur l'usage réel
+Extension à d'autres facultés si succès avéré
+Long terme :
+Intégration avec autres systèmes universitaires
+Développement de modules avancés d'analytics
+Internationalisation et adaptation autres contextes
+Innovation continue basée sur nouvelles technologies
+
+11.5 Engagement
+Ce cahier des charges représente l'engagement de l'équipe projet à délivrer une plateforme de qualité
+répondant aux besoins exprimés, dans le respect des contraintes de temps, de budget et de qualité
+définies.
+La réussite de ce projet contribuera significativement à l'amélioration de la formation médicale
+pratique et à la modernisation des processus administratifs de la faculté.
+
+APPROBATIONS
+Nom et Fonction
+Directeur de la Faculté de Médecine
+Commanditaire
+Chef de Projet Développement
+Responsable réalisation
+Responsable Administratif
+Utilisateur final
+
+Signature
+
+Date
+
+Nom et Fonction
+Responsable Pédagogique
+Utilisateur final
+Document version : 2.0
+Dernière mise à jour : 10 Novembre 2025
+Statut : Version finale validée
+Prochaine revue : 10 Février 2026
+
+Signature
+
+Date
+
+
