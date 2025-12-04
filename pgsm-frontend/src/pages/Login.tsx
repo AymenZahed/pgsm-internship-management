@@ -1,25 +1,36 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Stethoscope, Mail, Lock, Eye, EyeOff, GraduationCap, Building2, User, Shield } from "lucide-react";
+import { Stethoscope, Mail, Lock, Eye, EyeOff, GraduationCap, Building2, User, Shield, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 type UserRole = "student" | "doctor" | "hospital" | "admin";
 
 export default function Login() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  useLanguage(); // Initialize RTL support
+  const { login, isAuthenticated, user } = useAuth();
+  useLanguage();
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole>("student");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      navigate(`/${user.role}/dashboard`);
+    }
+  }, [isAuthenticated, user, navigate]);
 
   const roles = [
     { id: "student" as UserRole, label: t("auth.student"), icon: GraduationCap, description: t("auth.studentDesc") },
@@ -30,9 +41,35 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    navigate(`/${selectedRole}/dashboard`);
+    
+    try {
+      const result = await login(email, password);
+      
+      if (result.success) {
+        // Check if user role matches selected role
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          const userData = JSON.parse(storedUser);
+          if (userData.role !== selectedRole) {
+            // Role mismatch - logout and show error
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            setError(`This account is registered as "${userData.role}", not "${selectedRole}". Please select the correct role.`);
+            setIsLoading(false);
+            return;
+          }
+        }
+        toast.success(t("auth.loginSuccess"));
+        // Navigation will happen automatically via useEffect
+      } else {
+        setError(result.message || t("auth.loginFailed"));
+      }
+    } catch (err: any) {
+      setError(err.message || t("auth.loginFailed"));
+    }
+    
     setIsLoading(false);
   };
 
@@ -105,6 +142,13 @@ export default function Login() {
             <p className="text-muted-foreground mt-1">{t("auth.signInSubtitle")}</p>
           </div>
 
+          {error && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive">
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <p className="text-sm">{error}</p>
+            </div>
+          )}
+
           <div className="space-y-3">
             <Label className="text-sm font-medium">{t("auth.selectRole")}</Label>
             <div className="grid grid-cols-2 gap-3">
@@ -139,7 +183,16 @@ export default function Login() {
               <Label htmlFor="email">{t("auth.email")}</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input id="email" type="email" placeholder={t("auth.email")} value={email} onChange={(e) => setEmail(e.target.value)} className="pl-10" required />
+                <Input 
+                  id="email" 
+                  type="email" 
+                  placeholder={t("auth.email")} 
+                  value={email} 
+                  onChange={(e) => setEmail(e.target.value)} 
+                  className="pl-10" 
+                  required 
+                  disabled={isLoading}
+                />
               </div>
             </div>
 
@@ -150,7 +203,16 @@ export default function Login() {
               </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input id="password" type={showPassword ? "text" : "password"} placeholder={t("auth.password")} value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10 pr-10" required />
+                <Input 
+                  id="password" 
+                  type={showPassword ? "text" : "password"} 
+                  placeholder={t("auth.password")} 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)} 
+                  className="pl-10 pr-10" 
+                  required 
+                  disabled={isLoading}
+                />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>

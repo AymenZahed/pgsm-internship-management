@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   LayoutDashboard,
   User,
@@ -172,7 +173,9 @@ interface AppSidebarProps {
 export function AppSidebar({ role, userName, userAvatar }: AppSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const { t } = useTranslation();
+  const { logout } = useAuth();
   useLanguage(); // Initialize RTL support
   
   const menu = roleMenus[role] || studentMenu;
@@ -182,6 +185,11 @@ export function AppSidebar({ role, userName, userAvatar }: AppSidebarProps) {
     hospital: t("auth.hospital"),
     doctor: t("auth.doctor"),
     admin: t("auth.admin"),
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
   };
 
   return (
@@ -270,14 +278,17 @@ export function AppSidebar({ role, userName, userAvatar }: AppSidebarProps) {
           <Settings className="w-5 h-5" />
           {!collapsed && <span>{t("nav.settings")}</span>}
         </NavLink>
-        <NavLink
-          to="/login"
-          className={cn("sidebar-item text-destructive/80 hover:text-destructive hover:bg-destructive/10", collapsed && "justify-center px-0")}
+        <button
+          onClick={handleLogout}
+          className={cn(
+            "sidebar-item text-destructive/80 hover:text-destructive hover:bg-destructive/10 w-full",
+            collapsed && "justify-center px-0"
+          )}
           title={collapsed ? t("auth.logout") : undefined}
         >
           <LogOut className="w-5 h-5" />
           {!collapsed && <span>{t("auth.logout")}</span>}
-        </NavLink>
+        </button>
       </div>
 
       {/* Collapse Toggle */}

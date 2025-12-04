@@ -6,135 +6,74 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Calendar, Users, Eye, Edit, Trash2, Copy } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { offerService } from "@/services/offer.service";
+import { LoadingState, ErrorState } from "@/components/ui/loading-state";
 
-interface Offer {
-  id: string;
-  title: string;
-  department: string;
-  duration: string;
-  startDate: string;
-  endDate: string;
-  positions: number;
-  applicants: number;
-  status: "active" | "draft" | "closed" | "filled";
-  requirements: string[];
-  createdAt: string;
-  description: string;
-}
-
-const initialOffers: Offer[] = [
-  {
-    id: "1",
-    title: "Cardiology Clinical Internship",
-    department: "Cardiology",
-    duration: "3 months",
-    startDate: "2024-02-01",
-    endDate: "2024-04-30",
-    positions: 4,
-    applicants: 12,
-    status: "active",
-    requirements: ["4th year medical student", "Basic ECG knowledge"],
-    createdAt: "2024-01-10",
-    description: "Hands-on clinical experience in cardiology department"
-  },
-  {
-    id: "2",
-    title: "Emergency Medicine Rotation",
-    department: "Emergency",
-    duration: "2 months",
-    startDate: "2024-03-01",
-    endDate: "2024-04-30",
-    positions: 6,
-    applicants: 18,
-    status: "active",
-    requirements: ["BLS certification", "Available for night shifts"],
-    createdAt: "2024-01-15",
-    description: "Fast-paced emergency department rotation"
-  },
-  {
-    id: "3",
-    title: "Pediatric Care Internship",
-    department: "Pediatrics",
-    duration: "3 months",
-    startDate: "2024-04-01",
-    endDate: "2024-06-30",
-    positions: 3,
-    applicants: 0,
-    status: "draft",
-    requirements: ["Passion for child healthcare"],
-    createdAt: "2024-01-20",
-    description: "Comprehensive pediatric care training"
-  },
-  {
-    id: "4",
-    title: "Surgery Observation Program",
-    department: "Surgery",
-    duration: "1 month",
-    startDate: "2024-01-15",
-    endDate: "2024-02-15",
-    positions: 2,
-    applicants: 8,
-    status: "filled",
-    requirements: ["5th year student", "Strong anatomy knowledge"],
-    createdAt: "2024-01-01",
-    description: "Surgical observation and assistance"
-  },
-  {
-    id: "5",
-    title: "Internal Medicine Rotation",
-    department: "Internal Medicine",
-    duration: "2 months",
-    startDate: "2023-12-01",
-    endDate: "2024-01-31",
-    positions: 4,
-    applicants: 4,
-    status: "closed",
-    requirements: ["Clinical examination skills"],
-    createdAt: "2023-11-15",
-    description: "Internal medicine clinical rotation"
-  },
-];
+import { Offer } from "@/services/offer.service";
 
 export default function HospitalOffers() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
-  const [offers, setOffers] = useState<Offer[]>(initialOffers);
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
   const navigate = useNavigate();
 
+  const fetchOffers = async () => {
+    try {
+      setLoading(true);
+      const response = await offerService.getHospitalOffers();
+      if (response.success) {
+        setOffers(response.data || []);
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to load offers");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOffers();
+  }, []);
+
   const getStatusBadge = (status: Offer["status"]) => {
     switch (status) {
-      case "active":
-        return <Badge className="bg-green-500/20 text-green-600 hover:bg-green-500/30">Active</Badge>;
+      case "published":
+        return <Badge className="bg-green-500/20 text-green-600 hover:bg-green-500/30">Published</Badge>;
       case "draft":
         return <Badge variant="secondary">Draft</Badge>;
       case "closed":
         return <Badge variant="outline">Closed</Badge>;
-      case "filled":
-        return <Badge className="bg-blue-500/20 text-blue-600 hover:bg-blue-500/30">Filled</Badge>;
+      case "cancelled":
+        return <Badge className="bg-red-500/20 text-red-600 hover:bg-red-500/30">Cancelled</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
   const filteredOffers = offers.filter(offer => {
     const matchesSearch = offer.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      offer.department.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesTab = activeTab === "all" || offer.status === activeTab;
+      (offer.department || '').toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesTab = activeTab === "all" || offer.status === activeTab || 
+      (activeTab === "active" && offer.status === "published");
     return matchesSearch && matchesTab;
   });
 
   const stats = {
     total: offers.length,
-    active: offers.filter(o => o.status === "active").length,
-    totalPositions: offers.filter(o => o.status === "active").reduce((acc, o) => acc + o.positions, 0),
-    totalApplicants: offers.filter(o => o.status === "active").reduce((acc, o) => acc + o.applicants, 0),
+    active: offers.filter(o => o.status === "published").length,
+    totalPositions: offers.filter(o => o.status === "published").reduce((acc, o) => acc + o.positions, 0),
+    totalApplicants: offers.filter(o => o.status === "published").reduce((acc, o) => acc + (o.applicants || 0), 0),
   };
 
   const handleView = (offer: Offer) => {
@@ -147,34 +86,83 @@ export default function HospitalOffers() {
     setEditDialogOpen(true);
   };
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedOffer) return;
-    setOffers(offers.map(o => o.id === selectedOffer.id ? selectedOffer : o));
-    setEditDialogOpen(false);
-    toast.success("Offer updated successfully");
+    try {
+      const response = await offerService.updateOffer(selectedOffer.id, {
+        title: selectedOffer.title,
+        department: selectedOffer.department,
+        description: selectedOffer.description,
+        duration_weeks: selectedOffer.duration_weeks,
+        start_date: selectedOffer.start_date,
+        end_date: selectedOffer.end_date,
+        positions: selectedOffer.positions,
+        status: selectedOffer.status,
+        requirements: selectedOffer.requirements,
+      });
+      if (response.success) {
+        toast.success("Offer updated successfully");
+        setEditDialogOpen(false);
+        fetchOffers();
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update offer");
+    }
   };
 
-  const handleCopy = (offer: Offer) => {
-    const newOffer: Offer = {
-      ...offer,
-      id: Date.now().toString(),
-      title: `${offer.title} (Copy)`,
-      status: "draft",
-      applicants: 0,
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-    setOffers([newOffer, ...offers]);
-    toast.success("Offer duplicated successfully");
+  const handleCopy = async (offer: Offer) => {
+    try {
+      const response = await offerService.createOffer({
+        title: `${offer.title} (Copy)`,
+        department: offer.department,
+        description: offer.description,
+        duration_weeks: offer.duration_weeks,
+        start_date: offer.start_date,
+        end_date: offer.end_date,
+        positions: offer.positions,
+        status: "draft",
+        requirements: offer.requirements,
+      });
+      if (response.success) {
+        toast.success("Offer duplicated successfully");
+        fetchOffers();
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to duplicate offer");
+    }
   };
 
-  const handleDelete = (offerId: string) => {
-    setOffers(offers.filter(o => o.id !== offerId));
-    toast.success("Offer deleted successfully");
+  const handleDelete = async (offerId: string) => {
+    try {
+      const response = await offerService.deleteOffer(offerId);
+      if (response.success) {
+        toast.success("Offer deleted successfully");
+        fetchOffers();
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete offer");
+    }
   };
+
+  if (loading) {
+    return (
+      <AppLayout role="hospital">
+        <LoadingState message="Loading offers..." />
+      </AppLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AppLayout role="hospital">
+        <ErrorState message={error} onRetry={fetchOffers} />
+      </AppLayout>
+    );
+  }
 
   return (
-    <AppLayout role="hospital" userName="CHU Ibn Sina">
+    <AppLayout role="hospital">
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -251,27 +239,29 @@ export default function HospitalOffers() {
                     <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Calendar className="w-4 h-4" />
-                        {offer.duration}
+                        {offer.duration_weeks ? `${offer.duration_weeks} weeks` : 'N/A'}
                       </span>
                       <span className="flex items-center gap-1">
                         <Users className="w-4 h-4" />
                         {offer.positions} positions
                       </span>
                       <span>
-                        {new Date(offer.startDate).toLocaleDateString()} - {new Date(offer.endDate).toLocaleDateString()}
+                        {new Date(offer.start_date).toLocaleDateString()} - {new Date(offer.end_date).toLocaleDateString()}
                       </span>
                     </div>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {offer.requirements.map((req, idx) => (
-                        <Badge key={idx} variant="outline" className="text-xs">{req}</Badge>
-                      ))}
-                    </div>
+                    {offer.requirements && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {offer.requirements.split(',').map((req, idx) => (
+                          <Badge key={idx} variant="outline" className="text-xs">{req.trim()}</Badge>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                    {offer.status === "active" && (
+                    {offer.status === "published" && (
                       <div className="text-center px-4 py-2 bg-muted/50 rounded-lg">
-                        <p className="text-2xl font-bold text-primary">{offer.applicants}</p>
+                        <p className="text-2xl font-bold text-primary">{offer.applicants || 0}</p>
                         <p className="text-xs text-muted-foreground">Applicants</p>
                       </div>
                     )}
@@ -311,6 +301,7 @@ export default function HospitalOffers() {
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Offer Details</DialogTitle>
+              <DialogDescription>View internship offer information</DialogDescription>
             </DialogHeader>
             {selectedOffer && (
               <div className="space-y-4">
@@ -326,15 +317,15 @@ export default function HospitalOffers() {
                   </div>
                   <div>
                     <span className="text-muted-foreground">Duration:</span>
-                    <p className="font-medium">{selectedOffer.duration}</p>
+                    <p className="font-medium">{selectedOffer.duration_weeks ? `${selectedOffer.duration_weeks} weeks` : 'N/A'}</p>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Start Date:</span>
-                    <p className="font-medium">{new Date(selectedOffer.startDate).toLocaleDateString()}</p>
+                    <p className="font-medium">{new Date(selectedOffer.start_date).toLocaleDateString()}</p>
                   </div>
                   <div>
                     <span className="text-muted-foreground">End Date:</span>
-                    <p className="font-medium">{new Date(selectedOffer.endDate).toLocaleDateString()}</p>
+                    <p className="font-medium">{new Date(selectedOffer.end_date).toLocaleDateString()}</p>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Positions:</span>
@@ -342,17 +333,19 @@ export default function HospitalOffers() {
                   </div>
                   <div>
                     <span className="text-muted-foreground">Applicants:</span>
-                    <p className="font-medium">{selectedOffer.applicants}</p>
+                    <p className="font-medium">{selectedOffer.applicants || 0}</p>
                   </div>
                 </div>
-                <div>
-                  <span className="text-muted-foreground text-sm">Requirements:</span>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {selectedOffer.requirements.map((req, idx) => (
-                      <Badge key={idx} variant="outline">{req}</Badge>
-                    ))}
+                {selectedOffer.requirements && (
+                  <div>
+                    <span className="text-muted-foreground text-sm">Requirements:</span>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {selectedOffer.requirements.split(',').map((req, idx) => (
+                        <Badge key={idx} variant="outline">{req.trim()}</Badge>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
           </DialogContent>
@@ -363,6 +356,7 @@ export default function HospitalOffers() {
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Edit Offer</DialogTitle>
+              <DialogDescription>Update internship offer details</DialogDescription>
             </DialogHeader>
             {selectedOffer && (
               <form onSubmit={handleSaveEdit} className="space-y-4">
@@ -386,11 +380,12 @@ export default function HospitalOffers() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="duration">Duration</Label>
+                    <Label htmlFor="duration">Duration (weeks)</Label>
                     <Input
                       id="duration"
-                      value={selectedOffer.duration}
-                      onChange={(e) => setSelectedOffer({ ...selectedOffer, duration: e.target.value })}
+                      type="number"
+                      value={selectedOffer.duration_weeks || ''}
+                      onChange={(e) => setSelectedOffer({ ...selectedOffer, duration_weeks: parseInt(e.target.value) || undefined })}
                       required
                     />
                   </div>
@@ -401,8 +396,8 @@ export default function HospitalOffers() {
                     <Input
                       id="startDate"
                       type="date"
-                      value={selectedOffer.startDate}
-                      onChange={(e) => setSelectedOffer({ ...selectedOffer, startDate: e.target.value })}
+                      value={selectedOffer.start_date?.split('T')[0]}
+                      onChange={(e) => setSelectedOffer({ ...selectedOffer, start_date: e.target.value })}
                       required
                     />
                   </div>
@@ -411,8 +406,8 @@ export default function HospitalOffers() {
                     <Input
                       id="endDate"
                       type="date"
-                      value={selectedOffer.endDate}
-                      onChange={(e) => setSelectedOffer({ ...selectedOffer, endDate: e.target.value })}
+                      value={selectedOffer.end_date?.split('T')[0]}
+                      onChange={(e) => setSelectedOffer({ ...selectedOffer, end_date: e.target.value })}
                       required
                     />
                   </div>
@@ -432,16 +427,16 @@ export default function HospitalOffers() {
                     <Label htmlFor="status">Status</Label>
                     <Select
                       value={selectedOffer.status}
-                      onValueChange={(value: "active" | "draft" | "closed" | "filled") => setSelectedOffer({ ...selectedOffer, status: value })}
+                      onValueChange={(value: "draft" | "published" | "closed" | "cancelled") => setSelectedOffer({ ...selectedOffer, status: value })}
                     >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="active">Active</SelectItem>
                         <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="published">Published</SelectItem>
                         <SelectItem value="closed">Closed</SelectItem>
-                        <SelectItem value="filled">Filled</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

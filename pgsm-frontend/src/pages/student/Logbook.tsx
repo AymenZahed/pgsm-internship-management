@@ -4,67 +4,132 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Calendar, Plus, Check, Clock, FileText, Download } from "lucide-react";
-import { useState } from "react";
+import { Calendar, Plus, Check, Clock, FileText, Download, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { logbookService } from "@/services/logbook.service";
+import { studentService } from "@/services/student.service";
+import { LoadingState, ErrorState, EmptyState } from "@/components/ui/loading-state";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface LogbookEntry {
   id: string;
   date: string;
+  title?: string;
   activities: string;
-  skills: string;
-  reflections: string;
-  status: "approved" | "pending";
+  skills_learned?: string;
+  reflections?: string;
+  challenges?: string;
+  status: "draft" | "pending" | "approved" | "revision_requested";
+  supervisor_comments?: string;
+  internship_id: string;
+  hospital_name?: string;
 }
 
-const initialEntries: LogbookEntry[] = [
-  {
-    id: "1",
-    date: "2025-01-20",
-    activities: "Observed pediatric consultations, participated in morning rounds",
-    skills: "Patient examination, medical history taking",
-    reflections: "Learned about common pediatric conditions and communication with children",
-    status: "approved",
-  },
-  {
-    id: "2",
-    date: "2025-01-19",
-    activities: "Emergency department rotation, handled minor trauma cases",
-    skills: "Wound suturing, vital signs assessment",
-    reflections: "Developed confidence in emergency procedures",
-    status: "pending",
-  },
-];
+interface Internship {
+  id: string;
+  hospital_name: string;
+  service_name?: string;
+  status: string;
+}
 
 export default function Logbook() {
+  const { user } = useAuth();
+  const [entries, setEntries] = useState<LogbookEntry[]>([]);
+  const [internships, setInternships] = useState<Internship[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [entries, setEntries] = useState<LogbookEntry[]>(initialEntries);
   const [editingEntry, setEditingEntry] = useState<LogbookEntry | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
   const [newEntry, setNewEntry] = useState({
+    internship_id: "",
     date: new Date().toISOString().split('T')[0],
+    title: "",
     activities: "",
-    skills: "",
+    skills_learned: "",
     reflections: "",
+    challenges: "",
   });
 
-  const handleAddEntry = (e: React.FormEvent) => {
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [entriesRes, internshipsRes] = await Promise.all([
+        logbookService.getMyEntries(),
+        studentService.getDashboard(),
+      ]);
+      
+      if (entriesRes.success) {
+        setEntries(entriesRes.data || []);
+      }
+      
+      // Get active internships for selection
+      if (internshipsRes.success && internshipsRes.data?.stats) {
+        // We'll need to fetch internships separately
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to load logbook entries');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchInternships = async () => {
+    try {
+      // Get student profile ID first
+      const profileRes = await studentService.getDashboard();
+      if (profileRes.success) {
+        // Internships would come from student's active internships
+        // For now we'll work with entries that already have internship_id
+      }
+    } catch (err) {
+      console.error('Failed to fetch internships:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+    fetchInternships();
+  }, []);
+
+  const handleAddEntry = async (e: React.FormEvent) => {
     e.preventDefault();
-    const entry: LogbookEntry = {
-      id: Date.now().toString(),
-      ...newEntry,
-      status: "pending",
-    };
-    setEntries([entry, ...entries]);
-    setNewEntry({
-      date: new Date().toISOString().split('T')[0],
-      activities: "",
-      skills: "",
-      reflections: "",
-    });
-    setIsDialogOpen(false);
-    toast.success("Logbook entry added successfully");
+    if (!newEntry.activities.trim()) {
+      toast.error("Activities are required");
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      const response = await logbookService.createEntry({
+        ...newEntry,
+        internship_id: newEntry.internship_id || entries[0]?.internship_id || '',
+      });
+      
+      if (response.success) {
+        toast.success("Logbook entry added successfully");
+        setIsDialogOpen(false);
+        setNewEntry({
+          internship_id: "",
+          date: new Date().toISOString().split('T')[0],
+          title: "",
+          activities: "",
+          skills_learned: "",
+          reflections: "",
+          challenges: "",
+        });
+        fetchData();
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to add entry");
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleEditEntry = (entry: LogbookEntry) => {
@@ -72,16 +137,31 @@ export default function Logbook() {
     setIsEditDialogOpen(true);
   };
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingEntry) return;
     
-    setEntries(entries.map(entry => 
-      entry.id === editingEntry.id ? { ...editingEntry, status: "pending" } : entry
-    ));
-    setIsEditDialogOpen(false);
-    setEditingEntry(null);
-    toast.success("Logbook entry updated successfully");
+    try {
+      setActionLoading(true);
+      const response = await logbookService.updateEntry(editingEntry.id, {
+        title: editingEntry.title,
+        activities: editingEntry.activities,
+        skills_learned: editingEntry.skills_learned,
+        reflections: editingEntry.reflections,
+        challenges: editingEntry.challenges,
+      });
+      
+      if (response.success) {
+        toast.success("Logbook entry updated successfully");
+        setIsEditDialogOpen(false);
+        setEditingEntry(null);
+        fetchData();
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to update entry");
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleExportPDF = (entry: LogbookEntry) => {
@@ -90,7 +170,7 @@ LOGBOOK ENTRY
 =============
 
 Date: ${new Date(entry.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-Status: ${entry.status === 'approved' ? 'Approved' : 'Pending Review'}
+Status: ${entry.status === 'approved' ? 'Approved' : entry.status === 'pending' ? 'Pending Review' : entry.status}
 
 ACTIVITIES
 ----------
@@ -98,11 +178,21 @@ ${entry.activities}
 
 SKILLS PRACTICED
 ----------------
-${entry.skills}
+${entry.skills_learned || 'N/A'}
 
 REFLECTIONS
 -----------
-${entry.reflections}
+${entry.reflections || 'N/A'}
+
+CHALLENGES
+----------
+${entry.challenges || 'N/A'}
+
+${entry.supervisor_comments ? `
+SUPERVISOR COMMENTS
+-------------------
+${entry.supervisor_comments}
+` : ''}
 
 ---
 Generated on: ${new Date().toLocaleString()}
@@ -120,8 +210,22 @@ Generated on: ${new Date().toLocaleString()}
     toast.success("Logbook entry exported");
   };
 
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return <Badge className="bg-success text-success-foreground gap-1"><Check className="w-3 h-3" />Approved</Badge>;
+      case 'revision_requested':
+        return <Badge variant="destructive" className="gap-1">Revision Requested</Badge>;
+      default:
+        return <Badge variant="secondary" className="gap-1"><Clock className="w-3 h-3" />Pending Review</Badge>;
+    }
+  };
+
+  if (loading) return <AppLayout role="student" userName={user?.first_name || 'Student'}><LoadingState message="Loading logbook..." /></AppLayout>;
+  if (error) return <AppLayout role="student" userName={user?.first_name || 'Student'}><ErrorState message={error} onRetry={fetchData} /></AppLayout>;
+
   return (
-    <AppLayout role="student" userName="Ahmed Benali">
+    <AppLayout role="student" userName={user?.first_name || 'Student'}>
       <div className="space-y-6">
         <div className="page-header">
           <div>
@@ -140,19 +244,29 @@ Generated on: ${new Date().toLocaleString()}
                 <DialogTitle>Add Logbook Entry</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleAddEntry} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="date">Date</Label>
-                  <input
-                    type="date"
-                    id="date"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={newEntry.date}
-                    onChange={(e) => setNewEntry({ ...newEntry, date: e.target.value })}
-                    required
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="date">Date</Label>
+                    <Input
+                      type="date"
+                      id="date"
+                      value={newEntry.date}
+                      onChange={(e) => setNewEntry({ ...newEntry, date: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Title (Optional)</Label>
+                    <Input
+                      id="title"
+                      placeholder="Entry title..."
+                      value={newEntry.title}
+                      onChange={(e) => setNewEntry({ ...newEntry, title: e.target.value })}
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="activities">Activities</Label>
+                  <Label htmlFor="activities">Activities *</Label>
                   <Textarea
                     id="activities"
                     placeholder="Describe your daily activities and procedures observed"
@@ -168,9 +282,8 @@ Generated on: ${new Date().toLocaleString()}
                     id="skills"
                     placeholder="List the clinical skills you practiced"
                     rows={2}
-                    value={newEntry.skills}
-                    onChange={(e) => setNewEntry({ ...newEntry, skills: e.target.value })}
-                    required
+                    value={newEntry.skills_learned}
+                    onChange={(e) => setNewEntry({ ...newEntry, skills_learned: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
@@ -178,17 +291,27 @@ Generated on: ${new Date().toLocaleString()}
                   <Textarea
                     id="reflections"
                     placeholder="Your thoughts and learning points from today"
-                    rows={3}
+                    rows={2}
                     value={newEntry.reflections}
                     onChange={(e) => setNewEntry({ ...newEntry, reflections: e.target.value })}
-                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="challenges">Challenges</Label>
+                  <Textarea
+                    id="challenges"
+                    placeholder="Any challenges you faced"
+                    rows={2}
+                    value={newEntry.challenges}
+                    onChange={(e) => setNewEntry({ ...newEntry, challenges: e.target.value })}
                   />
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Cancel
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                  <Button type="submit" variant="hero" disabled={actionLoading}>
+                    {actionLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    Submit Entry
                   </Button>
-                  <Button type="submit" variant="hero">Submit Entry</Button>
                 </div>
               </form>
             </DialogContent>
@@ -203,16 +326,19 @@ Generated on: ${new Date().toLocaleString()}
             </DialogHeader>
             {editingEntry && (
               <form onSubmit={handleSaveEdit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-date">Date</Label>
-                  <input
-                    type="date"
-                    id="edit-date"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={editingEntry.date}
-                    onChange={(e) => setEditingEntry({ ...editingEntry, date: e.target.value })}
-                    required
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Date</Label>
+                    <Input type="date" value={editingEntry.date} disabled />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-title">Title</Label>
+                    <Input
+                      id="edit-title"
+                      value={editingEntry.title || ''}
+                      onChange={(e) => setEditingEntry({ ...editingEntry, title: e.target.value })}
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-activities">Activities</Label>
@@ -229,98 +355,99 @@ Generated on: ${new Date().toLocaleString()}
                   <Textarea
                     id="edit-skills"
                     rows={2}
-                    value={editingEntry.skills}
-                    onChange={(e) => setEditingEntry({ ...editingEntry, skills: e.target.value })}
-                    required
+                    value={editingEntry.skills_learned || ''}
+                    onChange={(e) => setEditingEntry({ ...editingEntry, skills_learned: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-reflections">Reflections</Label>
                   <Textarea
                     id="edit-reflections"
-                    rows={3}
-                    value={editingEntry.reflections}
+                    rows={2}
+                    value={editingEntry.reflections || ''}
                     onChange={(e) => setEditingEntry({ ...editingEntry, reflections: e.target.value })}
-                    required
                   />
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                    Cancel
+                  <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+                  <Button type="submit" variant="hero" disabled={actionLoading}>
+                    {actionLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    Save Changes
                   </Button>
-                  <Button type="submit" variant="hero">Save Changes</Button>
                 </div>
               </form>
             )}
           </DialogContent>
         </Dialog>
 
-        <div className="space-y-4">
-          {entries.map((entry) => (
-            <Card key={entry.id} className="p-6 hover:shadow-md transition-shadow">
-              <div className="space-y-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Calendar className="w-6 h-6 text-primary" />
+        {entries.length === 0 ? (
+          <EmptyState 
+            title="No logbook entries" 
+            description="Start documenting your learning activities"
+            action={<Button onClick={() => setIsDialogOpen(true)}>Add First Entry</Button>}
+          />
+        ) : (
+          <div className="space-y-4">
+            {entries.map((entry) => (
+              <Card key={entry.id} className="p-6 hover:shadow-md transition-shadow">
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Calendar className="w-6 h-6 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold">
+                          {entry.title || new Date(entry.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">{entry.hospital_name || 'Internship'}</p>
+                      </div>
                     </div>
+                    {getStatusBadge(entry.status)}
+                  </div>
+
+                  <div className="space-y-3">
                     <div>
-                      <h3 className="font-semibold">{new Date(entry.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</h3>
-                      <p className="text-sm text-muted-foreground">Pediatrics Rotation</p>
+                      <p className="text-sm font-medium text-muted-foreground mb-1">Activities</p>
+                      <p className="text-sm">{entry.activities}</p>
                     </div>
+                    {entry.skills_learned && (
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground mb-1">Skills Practiced</p>
+                        <p className="text-sm">{entry.skills_learned}</p>
+                      </div>
+                    )}
+                    {entry.reflections && (
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground mb-1">Reflections</p>
+                        <p className="text-sm">{entry.reflections}</p>
+                      </div>
+                    )}
+                    {entry.supervisor_comments && (
+                      <div className="p-3 bg-muted rounded-lg">
+                        <p className="text-sm font-medium text-muted-foreground mb-1">Supervisor Comments</p>
+                        <p className="text-sm">{entry.supervisor_comments}</p>
+                      </div>
+                    )}
                   </div>
-                  {entry.status === "approved" ? (
-                    <Badge className="bg-success text-success-foreground gap-1">
-                      <Check className="w-3 h-3" />
-                      Approved
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary" className="gap-1">
-                      <Clock className="w-3 h-3" />
-                      Pending Review
-                    </Badge>
-                  )}
-                </div>
 
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Activities</p>
-                    <p className="text-sm">{entry.activities}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Skills Practiced</p>
-                    <p className="text-sm">{entry.skills}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Reflections</p>
-                    <p className="text-sm">{entry.reflections}</p>
+                  <div className="flex gap-2 pt-2">
+                    {entry.status !== 'approved' && (
+                      <Button variant="outline" size="sm" className="gap-2" onClick={() => handleEditEntry(entry)}>
+                        <FileText className="w-4 h-4" />
+                        Edit
+                      </Button>
+                    )}
+                    <Button variant="outline" size="sm" className="gap-2" onClick={() => handleExportPDF(entry)}>
+                      <Download className="w-4 h-4" />
+                      Export
+                    </Button>
                   </div>
                 </div>
-
-                <div className="flex gap-2 pt-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="gap-2"
-                    onClick={() => handleEditEntry(entry)}
-                  >
-                    <FileText className="w-4 h-4" />
-                    Edit
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="gap-2"
-                    onClick={() => handleExportPDF(entry)}
-                  >
-                    <Download className="w-4 h-4" />
-                    Export PDF
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     </AppLayout>
   );

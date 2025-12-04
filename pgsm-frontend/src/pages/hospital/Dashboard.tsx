@@ -2,64 +2,95 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ApplicationStatus } from "@/components/applications/ApplicationStatus";
 import { Building2, FileText, Users, ClipboardList, Plus, ArrowRight, TrendingUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { hospitalService } from "@/services/hospital.service";
+import { LoadingState, ErrorState } from "@/components/ui/loading-state";
+import { useTranslation } from "react-i18next";
 
-const mockStats = {
-  totalServices: 12,
-  publishedOffers: 8,
-  receivedApplications: 45,
-  currentStudents: 23,
-};
-
-const mockRecentApplications = [
-  { id: "1", student: "Ahmed Benali", offer: "Internal Medicine", status: "under_review" as const, date: "2h ago" },
-  { id: "2", student: "Fatima Zahra", offer: "Pediatrics", status: "submitted" as const, date: "5h ago" },
-  { id: "3", student: "Omar Hassan", offer: "Surgery", status: "accepted" as const, date: "1 day ago" },
-  { id: "4", student: "Laila Amrani", offer: "Cardiology", status: "rejected" as const, date: "2 days ago" },
-];
-
-const mockActivities = [
-  {
-    id: "1",
-    type: "application" as const,
-    title: "New Application",
-    description: "Ahmed Benali applied for Internal Medicine",
-    time: "2h ago",
-    status: "info" as const,
-  },
-  {
-    id: "2",
-    type: "internship" as const,
-    title: "Internship Started",
-    description: "3 students started their rotation",
-    time: "1 day ago",
-    status: "success" as const,
-  },
-  {
-    id: "3",
-    type: "evaluation" as const,
-    title: "Evaluation Submitted",
-    description: "Dr. Benali submitted 2 evaluations",
-    time: "2 days ago",
-    status: "default" as const,
-  },
-];
-
-const mockServiceStats = [
-  { name: "Internal Medicine", students: 5, capacity: 8 },
-  { name: "Pediatrics", students: 4, capacity: 6 },
-  { name: "Surgery", students: 6, capacity: 6 },
-  { name: "Cardiology", students: 3, capacity: 5 },
-];
+interface DashboardData {
+  stats: {
+    active_offers: number;
+    pending_applications: number;
+    current_interns: number;
+    total_services: number;
+    total_tutors: number;
+  };
+  recentApplications: any[];
+  currentInterns: any[];
+}
 
 export default function HospitalDashboard() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const response = await hospitalService.getDashboard();
+        if (response.success) {
+          setDashboardData(response.data);
+        }
+      } catch (err: any) {
+        setError(err.message || "Failed to load dashboard");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <AppLayout role="hospital">
+        <LoadingState message={t("common.loading")} />
+      </AppLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AppLayout role="hospital">
+        <ErrorState message={error} onRetry={() => window.location.reload()} />
+      </AppLayout>
+    );
+  }
+
+  const stats = dashboardData?.stats || {
+    active_offers: 0,
+    pending_applications: 0,
+    current_interns: 0,
+    total_services: 0,
+    total_tutors: 0,
+  };
+
+  const recentApplications = dashboardData?.recentApplications || [];
+
+  const mockActivities = recentApplications.slice(0, 3).map((app, i) => ({
+    id: String(i),
+    type: "application" as const,
+    title: "New Application",
+    description: `${app.first_name} ${app.last_name} applied for ${app.offer_title}`,
+    time: new Date(app.created_at).toLocaleDateString(),
+    status: app.status === 'pending' ? 'warning' : 'info' as "info" | "warning" | "success" | "default",
+  }));
+
+  const mapStatus = (s: string): "submitted" | "under_review" | "accepted" | "rejected" => {
+    if (s === 'pending' || s === 'reviewing') return 'under_review';
+    if (s === 'accepted') return 'accepted';
+    if (s === 'rejected') return 'rejected';
+    return 'submitted';
+  };
 
   return (
-    <AppLayout role="hospital" userName="CHU Mohammed VI">
+    <AppLayout role="hospital">
       <div className="space-y-8">
         {/* Page Header */}
         <div className="flex items-start justify-between">
@@ -67,7 +98,7 @@ export default function HospitalDashboard() {
             <h1 className="page-title">Hospital Dashboard</h1>
             <p className="page-subtitle">Manage your internship programs and applications</p>
           </div>
-          <Button className="gap-2" onClick={() => navigate("/hospital/offers/new")}>
+          <Button className="gap-2" onClick={() => navigate("/hospital/offers/create")}>
             <Plus className="w-4 h-4" />
             Publish New Offer
           </Button>
@@ -77,7 +108,7 @@ export default function HospitalDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title="Medical Services"
-            value={mockStats.totalServices}
+            value={stats.total_services}
             subtitle="Active departments"
             icon={Building2}
             variant="primary"
@@ -85,23 +116,23 @@ export default function HospitalDashboard() {
           />
           <StatCard
             title="Published Offers"
-            value={mockStats.publishedOffers}
-            subtitle="4 closing soon"
+            value={stats.active_offers}
+            subtitle={`${stats.total_tutors} tutors available`}
             icon={FileText}
             variant="info"
             className="animate-slide-up stagger-2"
           />
           <StatCard
             title="Applications"
-            value={mockStats.receivedApplications}
-            trend={{ value: 12, isPositive: true }}
+            value={stats.pending_applications}
+            subtitle="Pending review"
             icon={ClipboardList}
             variant="warning"
             className="animate-slide-up stagger-3"
           />
           <StatCard
             title="Current Students"
-            value={mockStats.currentStudents}
+            value={stats.current_interns}
             subtitle="Across all services"
             icon={Users}
             variant="success"
@@ -121,77 +152,52 @@ export default function HospitalDashboard() {
               </Button>
             </div>
             
-            <div className="overflow-x-auto">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Student</th>
-                    <th>Position</th>
-                    <th>Status</th>
-                    <th>Date</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mockRecentApplications.map((app) => (
-                    <tr key={app.id}>
-                      <td className="font-medium">{app.student}</td>
-                      <td className="text-muted-foreground">{app.offer}</td>
-                      <td>
-                        <ApplicationStatus status={app.status} />
-                      </td>
-                      <td className="text-muted-foreground">{app.date}</td>
-                      <td>
-                        <Button variant="ghost" size="sm">
-                          Review
-                        </Button>
-                      </td>
+            {recentApplications.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Student</th>
+                      <th>Position</th>
+                      <th>Status</th>
+                      <th>Date</th>
+                      <th></th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {recentApplications.slice(0, 5).map((app) => (
+                      <tr key={app.id}>
+                        <td className="font-medium">{app.first_name} {app.last_name}</td>
+                        <td className="text-muted-foreground">{app.offer_title}</td>
+                        <td>
+                          <ApplicationStatus status={mapStatus(app.status)} />
+                        </td>
+                        <td className="text-muted-foreground">{new Date(app.created_at).toLocaleDateString()}</td>
+                        <td>
+                          <Button variant="ghost" size="sm" onClick={() => navigate(`/hospital/applications/${app.id}`)}>
+                            Review
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-center py-8 text-muted-foreground">No applications yet</p>
+            )}
           </div>
 
           {/* Right Sidebar */}
           <div className="space-y-6">
-            {/* Service Capacity */}
-            <div className="stat-card">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-foreground">Service Capacity</h3>
-                <TrendingUp className="w-4 h-4 text-success" />
-              </div>
-              <div className="space-y-4">
-                {mockServiceStats.map((service) => {
-                  const percentage = Math.round((service.students / service.capacity) * 100);
-                  const isFull = service.students >= service.capacity;
-                  
-                  return (
-                    <div key={service.name} className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium">{service.name}</span>
-                        <span className="text-muted-foreground">
-                          {service.students}/{service.capacity}
-                        </span>
-                      </div>
-                      <div className="h-2 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all ${
-                            isFull ? "bg-destructive" : percentage > 80 ? "bg-warning" : "bg-primary"
-                          }`}
-                          style={{ width: `${Math.min(percentage, 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
             {/* Recent Activity */}
             <div className="stat-card">
               <h3 className="font-semibold text-foreground mb-4">Recent Activity</h3>
-              <ActivityFeed activities={mockActivities} />
+              {mockActivities.length > 0 ? (
+                <ActivityFeed activities={mockActivities} />
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">No recent activity</p>
+              )}
             </div>
           </div>
         </div>
@@ -201,7 +207,7 @@ export default function HospitalDashboard() {
           <Button
             variant="outline"
             className="h-auto py-6 flex-col items-center gap-2"
-            onClick={() => navigate("/hospital/offers/new")}
+            onClick={() => navigate("/hospital/offers/create")}
           >
             <FileText className="w-6 h-6 text-primary" />
             <span>Create New Offer</span>

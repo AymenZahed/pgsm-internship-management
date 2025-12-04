@@ -10,6 +10,7 @@ import { Stethoscope, Mail, User, ArrowLeft, Send, Phone, MapPin, Clock, CheckCi
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "@/hooks/useLanguage";
+import api from "@/lib/api";
 
 export default function ContactSupport() {
   const [formData, setFormData] = useState({
@@ -46,14 +47,25 @@ export default function ContactSupport() {
     }
 
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsSubmitted(true);
-    setIsLoading(false);
     
-    toast({
-      title: t("contactSupport.messageSent") || "Message envoyé",
-      description: t("contactSupport.teamWillRespond") || "Notre équipe vous répondra rapidement.",
-    });
+    try {
+      const response = await api.post('/support/contact', formData);
+      if (response.data.success) {
+        setIsSubmitted(true);
+        toast({
+          title: t("contactSupport.messageSent") || "Message envoyé",
+          description: t("contactSupport.teamWillRespond") || "Notre équipe vous répondra rapidement.",
+        });
+      }
+    } catch (err: any) {
+      toast({
+        title: t("common.error") || "Erreur",
+        description: err.response?.data?.message || "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleChange = (field: string, value: string) => {

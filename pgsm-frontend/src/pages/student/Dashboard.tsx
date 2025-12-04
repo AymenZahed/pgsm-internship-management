@@ -8,110 +8,151 @@ import { FileText, ClipboardList, CalendarCheck, Star, ArrowRight, AlertCircle }
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useAuth } from "@/contexts/AuthContext";
+import { studentService } from "@/services/student.service";
+import { offerService } from "@/services/offer.service";
+import { userService } from "@/services/user.service";
+import { useEffect, useState } from "react";
+import { LoadingState, ErrorState } from "@/components/ui/loading-state";
 
-const mockStats = {
-  applications: 3,
-  activeInternships: 1,
-  attendanceRate: 92,
-  evaluations: 2,
-};
+interface DashboardData {
+  stats: {
+    total_applications: number;
+    pending_applications: number;
+    accepted_applications: number;
+    active_internships: number;
+    completed_internships: number;
+    average_score: number | null;
+  };
+  deadlines: any[];
+  activities: any[];
+}
+
+interface ProfileCompletion {
+  progress: number;
+  items: { label: string; completed: boolean }[];
+}
 
 export default function StudentDashboard() {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { user } = useAuth();
   useLanguage();
 
-  const mockActivities = [
-    {
-      id: "1",
-      type: "application" as const,
-      title: t("dashboard.activities.applicationSubmitted"),
-      description: t("dashboard.activities.cardiologyInternship"),
-      time: t("dashboard.activities.hoursAgo", { count: 2 }),
-      status: "info" as const,
-    },
-    {
-      id: "2",
-      type: "evaluation" as const,
-      title: t("dashboard.activities.evaluationReceived"),
-      description: t("dashboard.activities.midTermEvaluation"),
-      time: t("dashboard.activities.dayAgo", { count: 1 }),
-      status: "success" as const,
-    },
-    {
-      id: "3",
-      type: "message" as const,
-      title: t("dashboard.activities.newMessage"),
-      description: t("dashboard.activities.doctorSentMessage"),
-      time: t("dashboard.activities.daysAgo", { count: 2 }),
-      status: "default" as const,
-    },
-    {
-      id: "4",
-      type: "internship" as const,
-      title: t("dashboard.activities.internshipStartingSoon"),
-      description: t("dashboard.activities.pediatricsStarts"),
-      time: t("dashboard.activities.daysAgo", { count: 3 }),
-      status: "warning" as const,
-    },
-  ];
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [recommendedOffers, setRecommendedOffers] = useState<any[]>([]);
+  const [profileCompletion, setProfileCompletion] = useState<ProfileCompletion>({
+    progress: 0,
+    items: [],
+  });
 
-  const mockRecommendedInternships = [
-    {
-      id: "1",
-      title: t("dashboard.internships.internalMedicine"),
-      hospital: "CHU Mohammed VI",
-      service: t("dashboard.internships.internalMedicineService"),
-      location: "Marrakech",
-      startDate: "Jan 15",
-      endDate: "Mar 15",
-      spotsAvailable: 3,
-      totalSpots: 5,
-      deadline: "Dec 30",
-      tags: [t("dashboard.internships.fourthYear"), t("dashboard.internships.required")],
-    },
-    {
-      id: "2",
-      title: t("dashboard.internships.surgeryObservation"),
-      hospital: "Hôpital Ibn Sina",
-      service: t("dashboard.internships.generalSurgery"),
-      location: "Rabat",
-      startDate: "Feb 1",
-      endDate: "Apr 1",
-      spotsAvailable: 1,
-      totalSpots: 4,
-      deadline: "Jan 15",
-      tags: [t("dashboard.internships.fifthYear"), t("dashboard.internships.elective")],
-    },
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [dashboardRes, offersRes, profileRes] = await Promise.all([
+          studentService.getDashboard(),
+          offerService.getAllOffers({ limit: 4 }),
+          userService.getProfile(),
+        ]);
 
-  const profileCompletion = {
-    progress: 75,
-    items: [
-      { label: t("dashboard.profile.personalInfo"), completed: true },
-      { label: t("dashboard.profile.academicDetails"), completed: true },
-      { label: t("dashboard.profile.uploadCV"), completed: true },
-      { label: t("dashboard.profile.emergencyContact"), completed: false },
-    ],
+        if (dashboardRes.success) {
+          setDashboardData(dashboardRes.data);
+        }
+        if (offersRes.success) {
+          setRecommendedOffers(offersRes.data || []);
+        }
+        
+        // Calculate profile completion from real data
+        if (profileRes.success && profileRes.data) {
+          const userData = profileRes.data;
+          const profile = userData.profile || {};
+          
+          const items = [
+            { 
+              label: t("dashboard.profile.personalInfo"), 
+              completed: !!(userData.first_name && userData.last_name && userData.email) 
+            },
+            { 
+              label: t("dashboard.profile.academicDetails"), 
+              completed: !!(profile.faculty && profile.department && profile.academic_year) 
+            },
+            { 
+              label: t("dashboard.profile.uploadCV"), 
+              completed: !!(profile as any).cv_path 
+            },
+            { 
+              label: t("dashboard.profile.emergencyContact"), 
+              completed: !!(profile.emergency_contact && profile.emergency_phone) 
+            },
+          ];
+          
+          const completedCount = items.filter(item => item.completed).length;
+          const progress = Math.round((completedCount / items.length) * 100);
+          
+          setProfileCompletion({ progress, items });
+        }
+      } catch (err: any) {
+        setError(err.message || "Failed to load dashboard");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [t]);
+
+  const mockActivities = dashboardData?.activities?.map((a: any, i: number) => ({
+    id: String(i),
+    type: a.type as "application" | "evaluation" | "message" | "internship",
+    title: a.type === 'application' ? t("dashboard.activities.applicationSubmitted") : t("dashboard.activities.evaluationReceived"),
+    description: a.description,
+    time: new Date(a.created_at).toLocaleDateString(),
+    status: a.status === 'pending' ? 'warning' : a.status === 'accepted' ? 'success' : 'info' as "info" | "success" | "warning" | "default",
+  })) || [];
+
+  const requiredActions = dashboardData?.deadlines?.length ? 
+    dashboardData.deadlines.map(d => ({ label: `${d.title} - ${t("dashboard.actions.deadline")}: ${new Date(d.application_deadline).toLocaleDateString()}`, urgent: true })) :
+    [];
+
+  if (loading) {
+    return (
+      <AppLayout role="student">
+        <LoadingState message={t("common.loading")} />
+      </AppLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AppLayout role="student">
+        <ErrorState message={error} onRetry={() => window.location.reload()} />
+      </AppLayout>
+    );
+  }
+
+  const stats = {
+    total_applications: dashboardData?.stats?.total_applications || 0,
+    pending_applications: dashboardData?.stats?.pending_applications || 0,
+    active_internships: dashboardData?.stats?.active_internships || 0,
+    completed_internships: dashboardData?.stats?.completed_internships || 0,
+    accepted_applications: dashboardData?.stats?.accepted_applications || 0,
+    average_score: dashboardData?.stats?.average_score || 0,
   };
 
-  const requiredActions = [
-    { label: t("dashboard.actions.completeProfile"), urgent: true },
-    { label: t("dashboard.actions.submitLogbook"), urgent: false },
-    { label: t("dashboard.actions.reviewEvaluation"), urgent: false },
-  ];
-
   return (
-    <AppLayout role="student" userName="Ahmed Benali">
+    <AppLayout role="student">
       <div className="space-y-8">
         {/* Page Header */}
         <div className="page-header">
-          <h1 className="page-title">{t("dashboard.welcomeBack", { name: "Ahmed" })} 👋</h1>
+          <h1 className="page-title">{t("dashboard.welcomeBack", { name: user?.first_name || "Student" })} 👋</h1>
           <p className="page-subtitle">{t("dashboard.overviewSubtitle")}</p>
         </div>
 
         {/* Required Actions Alert */}
-        {requiredActions.some((a) => a.urgent) && (
+        {requiredActions.length > 0 && (
           <div className="bg-warning/10 border border-warning/30 rounded-xl p-4 flex items-start gap-3 animate-fade-in">
             <AlertCircle className="w-5 h-5 text-warning mt-0.5" />
             <div className="flex-1">
@@ -126,7 +167,7 @@ export default function StudentDashboard() {
                 ))}
               </ul>
             </div>
-            <Button variant="warning" size="sm">
+            <Button variant="warning" size="sm" onClick={() => navigate("/student/internships")}>
               {t("dashboard.completeNow")}
             </Button>
           </div>
@@ -136,32 +177,31 @@ export default function StudentDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title={t("nav.applications")}
-            value={mockStats.applications}
-            subtitle={t("dashboard.stats.pendingReview", { count: 2 })}
+            value={stats.total_applications}
+            subtitle={t("dashboard.stats.pendingReview", { count: stats.pending_applications })}
             icon={FileText}
             variant="primary"
             className="animate-slide-up stagger-1"
           />
           <StatCard
             title={t("dashboard.stats.activeInternships")}
-            value={mockStats.activeInternships}
-            subtitle={t("dashboard.stats.pediatricsAtCHU")}
+            value={stats.active_internships}
+            subtitle={stats.active_internships > 0 ? t("dashboard.stats.pediatricsAtCHU") : t("common.none")}
             icon={ClipboardList}
             variant="success"
             className="animate-slide-up stagger-2"
           />
           <StatCard
             title={t("dashboard.stats.attendanceRate")}
-            value={`${mockStats.attendanceRate}%`}
-            trend={{ value: 5, isPositive: true }}
+            value={`${stats.average_score ? Math.round(stats.average_score) : 0}%`}
             icon={CalendarCheck}
             variant="info"
             className="animate-slide-up stagger-3"
           />
           <StatCard
             title={t("nav.evaluations")}
-            value={mockStats.evaluations}
-            subtitle={t("dashboard.stats.newEvaluation")}
+            value={stats.accepted_applications}
+            subtitle={stats.accepted_applications > 0 ? t("dashboard.stats.newEvaluation") : t("common.none")}
             icon={Star}
             variant="warning"
             className="animate-slide-up stagger-4"
@@ -188,7 +228,11 @@ export default function StudentDashboard() {
                   {t("common.viewAll")}
                 </Button>
               </div>
-              <ActivityFeed activities={mockActivities} />
+              {mockActivities.length > 0 ? (
+                <ActivityFeed activities={mockActivities} />
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">{t("common.noData")}</p>
+              )}
             </div>
           </div>
 
@@ -210,15 +254,31 @@ export default function StudentDashboard() {
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-              {mockRecommendedInternships.map((internship, index) => (
-                <InternshipCard
-                  key={internship.id}
-                  {...internship}
-                  onApply={(id) => navigate(`/student/apply/${id}`)}
-                  onViewDetails={(id) => navigate(`/student/internships/${id}`)}
-                  className={`animate-slide-up stagger-${index + 1}`}
-                />
-              ))}
+              {recommendedOffers.length > 0 ? (
+                recommendedOffers.map((offer, index) => (
+                  <InternshipCard
+                    key={offer.id}
+                    id={offer.id}
+                    title={offer.title}
+                    hospital={offer.hospital_name}
+                    service={offer.service_name || offer.department}
+                    location={offer.hospital_city}
+                    startDate={new Date(offer.start_date).toLocaleDateString()}
+                    endDate={new Date(offer.end_date).toLocaleDateString()}
+                    spotsAvailable={offer.positions - offer.filled_positions}
+                    totalSpots={offer.positions}
+                    deadline={offer.application_deadline ? new Date(offer.application_deadline).toLocaleDateString() : undefined}
+                    tags={[offer.type, offer.department].filter(Boolean)}
+                    onApply={(id) => navigate(`/student/internships/${id}/apply`)}
+                    onViewDetails={(id) => navigate(`/student/internships/${id}`)}
+                    className={`animate-slide-up stagger-${index + 1}`}
+                  />
+                ))
+              ) : (
+                <div className="col-span-2 text-center py-8 text-muted-foreground">
+                  {t("common.noData")}
+                </div>
+              )}
             </div>
           </div>
         </div>

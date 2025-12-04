@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { InternshipCard } from "@/components/internships/InternshipCard";
@@ -8,147 +8,130 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Filter, Grid3X3, List, MapPin, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { offerService } from "@/services/offer.service";
+import { LoadingState, ErrorState, EmptyState } from "@/components/ui/loading-state";
+import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "react-i18next";
 
-const mockInternships = [
-  {
-    id: "1",
-    title: "Internal Medicine Rotation",
-    hospital: "CHU Mohammed VI",
-    service: "Internal Medicine",
-    location: "Marrakech",
-    startDate: "Jan 15",
-    endDate: "Mar 15",
-    spotsAvailable: 3,
-    totalSpots: 5,
-    deadline: "Dec 30",
-    tags: ["4th Year", "Required"],
-  },
-  {
-    id: "2",
-    title: "Surgery Observation",
-    hospital: "Hôpital Ibn Sina",
-    service: "General Surgery",
-    location: "Rabat",
-    startDate: "Feb 1",
-    endDate: "Apr 1",
-    spotsAvailable: 1,
-    totalSpots: 4,
-    deadline: "Jan 15",
-    tags: ["5th Year", "Elective"],
-  },
-  {
-    id: "3",
-    title: "Pediatrics Internship",
-    hospital: "CHU Hassan II",
-    service: "Pediatrics",
-    location: "Fes",
-    startDate: "Jan 20",
-    endDate: "Mar 20",
-    spotsAvailable: 5,
-    totalSpots: 8,
-    deadline: "Jan 10",
-    tags: ["3rd Year", "Required"],
-  },
-  {
-    id: "4",
-    title: "Cardiology Clinical",
-    hospital: "CHU Ibn Rochd",
-    service: "Cardiology",
-    location: "Casablanca",
-    startDate: "Feb 15",
-    endDate: "Apr 15",
-    spotsAvailable: 0,
-    totalSpots: 3,
-    deadline: "Feb 1",
-    tags: ["6th Year", "Specialty"],
-  },
-  {
-    id: "5",
-    title: "Emergency Medicine",
-    hospital: "Hôpital Militaire",
-    service: "Emergency",
-    location: "Rabat",
-    startDate: "Mar 1",
-    endDate: "May 1",
-    spotsAvailable: 2,
-    totalSpots: 6,
-    deadline: "Feb 15",
-    tags: ["5th Year", "Elective"],
-  },
-  {
-    id: "6",
-    title: "Obstetrics & Gynecology",
-    hospital: "Maternité Souissi",
-    service: "OB/GYN",
-    location: "Rabat",
-    startDate: "Jan 25",
-    endDate: "Mar 25",
-    spotsAvailable: 4,
-    totalSpots: 6,
-    deadline: "Jan 20",
-    tags: ["4th Year", "Required"],
-  },
-];
+interface Offer {
+  id: string;
+  title: string;
+  hospital_name?: string;
+  service_name?: string;
+  hospital_city?: string;
+  start_date: string;
+  end_date: string;
+  positions: number;
+  filled_positions?: number;
+  application_deadline?: string;
+  department?: string;
+  type?: string;
+}
 
-const locations = ["All Locations", "Rabat", "Casablanca", "Marrakech", "Fes"];
-const services = ["All Services", "Internal Medicine", "General Surgery", "Pediatrics", "Cardiology", "Emergency", "OB/GYN"];
-const years = ["All Years", "3rd Year", "4th Year", "5th Year", "6th Year"];
+interface FilterOptions {
+  cities: string[];
+  departments: string[];
+}
 
 export default function InternshipsList() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { t } = useTranslation();
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [selectedLocation, setSelectedLocation] = useState("All Locations");
-  const [selectedService, setSelectedService] = useState("All Services");
-  const [selectedYear, setSelectedYear] = useState("All Years");
+  const [selectedCity, setSelectedCity] = useState("all");
+  const [selectedDepartment, setSelectedDepartment] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
+  const [filterOptions, setFilterOptions] = useState<FilterOptions>({ cities: [], departments: [] });
+
+  // Fetch filter options (cities and departments) from database
+  const fetchFilterOptions = useCallback(async () => {
+    try {
+      const response = await offerService.getFilterOptions();
+      if (response.success && response.data) {
+        setFilterOptions({
+          cities: response.data.cities || [],
+          departments: response.data.departments || [],
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch filter options:', err);
+    }
+  }, []);
+
+  const fetchOffers = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await offerService.getAllOffers({
+        search: searchQuery || undefined,
+        city: selectedCity !== 'all' ? selectedCity : undefined,
+        department: selectedDepartment !== 'all' ? selectedDepartment : undefined,
+      });
+      if (response.success && response.data) {
+        setOffers(response.data);
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message || t('common.error'));
+    } finally {
+      setLoading(false);
+    }
+  }, [searchQuery, selectedCity, selectedDepartment, t]);
+
+  useEffect(() => {
+    fetchFilterOptions();
+  }, [fetchFilterOptions]);
+
+  useEffect(() => {
+    const debounce = setTimeout(() => {
+      fetchOffers();
+    }, 300);
+    return () => clearTimeout(debounce);
+  }, [fetchOffers]);
 
   const activeFilters = [
-    selectedLocation !== "All Locations" && selectedLocation,
-    selectedService !== "All Services" && selectedService,
-    selectedYear !== "All Years" && selectedYear,
+    selectedCity !== "all" && selectedCity,
+    selectedDepartment !== "all" && selectedDepartment,
   ].filter(Boolean);
 
-  const filteredInternships = mockInternships.filter((internship) => {
-    const matchesSearch =
-      internship.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      internship.hospital.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      internship.service.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesLocation =
-      selectedLocation === "All Locations" || internship.location === selectedLocation;
-    
-    const matchesService =
-      selectedService === "All Services" || internship.service === selectedService;
-    
-    const matchesYear =
-      selectedYear === "All Years" || internship.tags.includes(selectedYear);
-
-    return matchesSearch && matchesLocation && matchesService && matchesYear;
-  });
-
   const clearFilters = () => {
-    setSelectedLocation("All Locations");
-    setSelectedService("All Services");
-    setSelectedYear("All Years");
+    setSelectedCity("all");
+    setSelectedDepartment("all");
     setSearchQuery("");
   };
 
+  if (loading && offers.length === 0) {
+    return (
+      <AppLayout role="student" userName={user?.first_name || 'Student'}>
+        <LoadingState message={t('common.loading')} />
+      </AppLayout>
+    );
+  }
+
+  if (error && offers.length === 0) {
+    return (
+      <AppLayout role="student" userName={user?.first_name || 'Student'}>
+        <ErrorState message={error} onRetry={fetchOffers} />
+      </AppLayout>
+    );
+  }
+
   return (
-    <AppLayout role="student" userName="Ahmed Benali">
+    <AppLayout role="student" userName={user?.first_name || 'Student'}>
       <div className="space-y-6">
-        {/* Page Header */}
         <div className="page-header">
-          <h1 className="page-title">Browse Internships</h1>
-          <p className="page-subtitle">Find and apply to medical internships that match your needs</p>
+          <h1 className="page-title">{t('sidebar.browseInternships')}</h1>
+          <p className="page-subtitle">{t('internships.subtitle', 'Find and apply to medical internships that match your needs')}</p>
         </div>
 
-        {/* Search and Filter Bar */}
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input
-              placeholder="Search by title, hospital, or service..."
+              placeholder={t('internships.searchPlaceholder', 'Search by title, hospital, or service...')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -162,7 +145,7 @@ export default function InternshipsList() {
               className="gap-2"
             >
               <Filter className="w-4 h-4" />
-              Filters
+              {t('common.filters', 'Filters')}
               {activeFilters.length > 0 && (
                 <Badge variant="default" className="ml-1 h-5 w-5 p-0 flex items-center justify-center">
                   {activeFilters.length}
@@ -191,48 +174,35 @@ export default function InternshipsList() {
           </div>
         </div>
 
-        {/* Filters Panel */}
         {showFilters && (
           <div className="bg-card border border-border rounded-xl p-4 animate-fade-in">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Location</label>
-                <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+                <label className="text-sm font-medium">{t('common.city', 'City')}</label>
+                <Select value={selectedCity} onValueChange={setSelectedCity}>
                   <SelectTrigger>
                     <MapPin className="w-4 h-4 mr-2 text-muted-foreground" />
-                    <SelectValue placeholder="Select location" />
+                    <SelectValue placeholder={t('common.selectCity', 'Select city')} />
                   </SelectTrigger>
                   <SelectContent>
-                    {locations.map((loc) => (
-                      <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                    <SelectItem value="all">{t('common.allCities', 'All Cities')}</SelectItem>
+                    {filterOptions.cities.map((city) => (
+                      <SelectItem key={city} value={city}>{city}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               
               <div className="space-y-2">
-                <label className="text-sm font-medium">Service</label>
-                <Select value={selectedService} onValueChange={setSelectedService}>
+                <label className="text-sm font-medium">{t('common.department', 'Department')}</label>
+                <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select service" />
+                    <SelectValue placeholder={t('common.selectDepartment', 'Select department')} />
                   </SelectTrigger>
                   <SelectContent>
-                    {services.map((service) => (
-                      <SelectItem key={service} value={service}>{service}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Academic Year</label>
-                <Select value={selectedYear} onValueChange={setSelectedYear}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select year" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {years.map((year) => (
-                      <SelectItem key={year} value={year}>{year}</SelectItem>
+                    <SelectItem value="all">{t('common.allDepartments', 'All Departments')}</SelectItem>
+                    {filterOptions.departments.map((dept) => (
+                      <SelectItem key={dept} value={dept}>{dept}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -241,10 +211,9 @@ export default function InternshipsList() {
           </div>
         )}
 
-        {/* Active Filters */}
         {activeFilters.length > 0 && (
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm text-muted-foreground">Active filters:</span>
+            <span className="text-sm text-muted-foreground">{t('common.activeFilters', 'Active filters')}:</span>
             {activeFilters.map((filter) => (
               <Badge key={filter as string} variant="secondary" className="gap-1">
                 {filter}
@@ -252,51 +221,48 @@ export default function InternshipsList() {
               </Badge>
             ))}
             <Button variant="ghost" size="sm" onClick={clearFilters} className="text-destructive">
-              Clear all
+              {t('common.clearAll', 'Clear all')}
             </Button>
           </div>
         )}
 
-        {/* Results Count */}
         <div className="text-sm text-muted-foreground">
-          Showing {filteredInternships.length} of {mockInternships.length} internships
+          {t('internships.showingCount', 'Showing {{count}} internships', { count: offers.length })}
         </div>
 
-        {/* Internships Grid/List */}
-        <div
-          className={cn(
-            viewMode === "grid"
-              ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
-              : "space-y-4"
-          )}
-        >
-          {filteredInternships.map((internship, index) => (
-            <InternshipCard
-              key={internship.id}
-              {...internship}
-              onApply={(id) => navigate(`/student/internships/${id}/apply`)}
-              onViewDetails={(id) => navigate(`/student/internships/${id}`)}
-              className={cn(
-                "animate-slide-up",
-                `stagger-${Math.min(index + 1, 4)}`
-              )}
-            />
-          ))}
-        </div>
-
-        {/* Empty State */}
-        {filteredInternships.length === 0 && (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-              <Search className="w-8 h-8 text-muted-foreground" />
-            </div>
-            <h3 className="font-semibold text-lg mb-2">No internships found</h3>
-            <p className="text-muted-foreground mb-4">
-              Try adjusting your search or filters to find more results
-            </p>
-            <Button variant="outline" onClick={clearFilters}>
-              Clear Filters
-            </Button>
+        {offers.length === 0 ? (
+          <EmptyState 
+            title={t('internships.noResults', 'No internships found')} 
+            description={t('internships.noResultsDesc', 'Try adjusting your search or filters to find more results')}
+            action={<Button variant="outline" onClick={clearFilters}>{t('common.clearFilters', 'Clear Filters')}</Button>}
+          />
+        ) : (
+          <div
+            className={cn(
+              viewMode === "grid"
+                ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
+                : "space-y-4"
+            )}
+          >
+            {offers.map((offer, index) => (
+              <InternshipCard
+                key={offer.id}
+                id={offer.id}
+                title={offer.title}
+                hospital={offer.hospital_name}
+                service={offer.service_name || offer.department || ''}
+                location={offer.hospital_city}
+                startDate={new Date(offer.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                endDate={new Date(offer.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                spotsAvailable={offer.positions - offer.filled_positions}
+                totalSpots={offer.positions}
+                deadline={offer.application_deadline ? new Date(offer.application_deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : undefined}
+                tags={[offer.type]}
+                onApply={(id) => navigate(`/student/internships/${id}/apply`)}
+                onViewDetails={(id) => navigate(`/student/internships/${id}`)}
+                className={cn("animate-slide-up", `stagger-${Math.min(index + 1, 4)}`)}
+              />
+            ))}
           </div>
         )}
       </div>

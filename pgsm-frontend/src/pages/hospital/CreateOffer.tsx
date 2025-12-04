@@ -9,11 +9,14 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ArrowLeft, CalendarIcon, Plus, X, Save, Eye } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { offerService } from "@/services/offer.service";
+import { serviceService } from "@/services/service.service";
+import { tutorService } from "@/services/tutor.service";
 
 export default function CreateOffer() {
   const navigate = useNavigate();
@@ -22,6 +25,9 @@ export default function CreateOffer() {
   const [endDate, setEndDate] = useState<Date>();
   const [requirements, setRequirements] = useState<string[]>([]);
   const [newRequirement, setNewRequirement] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [departments, setDepartments] = useState<string[]>([]);
+  const [supervisors, setSupervisors] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     title: "",
     department: "",
@@ -31,23 +37,27 @@ export default function CreateOffer() {
     supervisorId: "",
   });
 
-  const departments = [
-    "Cardiology",
-    "Emergency",
-    "Pediatrics",
-    "Surgery",
-    "Neurology",
-    "Internal Medicine",
-    "Radiology",
-    "Oncology",
-  ];
-
-  const supervisors = [
-    { id: "1", name: "Dr. Ahmed Benali", department: "Cardiology" },
-    { id: "2", name: "Dr. Fatima Zahra", department: "Emergency" },
-    { id: "3", name: "Dr. Khalid Mansouri", department: "Pediatrics" },
-    { id: "4", name: "Dr. Hassan Alami", department: "Surgery" },
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch services for departments
+        const servicesResponse = await serviceService.getServices();
+        if (servicesResponse.success && servicesResponse.data) {
+          const uniqueDepts = [...new Set(servicesResponse.data.map((s: any) => s.department || s.name))];
+          setDepartments(uniqueDepts.filter(Boolean) as string[]);
+        }
+        
+        // Fetch tutors as supervisors
+        const tutorsResponse = await tutorService.getTutors();
+        if (tutorsResponse.success && tutorsResponse.data) {
+          setSupervisors(tutorsResponse.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch data:", err);
+      }
+    };
+    fetchData();
+  }, []);
 
   const addRequirement = () => {
     if (newRequirement.trim() && !requirements.includes(newRequirement.trim())) {
@@ -60,18 +70,53 @@ export default function CreateOffer() {
     setRequirements(requirements.filter(r => r !== req));
   };
 
-  const handleSubmit = (isDraft: boolean) => {
-    toast({
-      title: isDraft ? "Draft Saved" : "Offer Published",
-      description: isDraft 
-        ? "Your internship offer has been saved as a draft." 
-        : "Your internship offer is now live and accepting applications.",
-    });
-    navigate("/hospital/offers");
+  const handleSubmit = async (isDraft: boolean) => {
+    if (!formData.title || !formData.department || !startDate || !endDate || !formData.positions) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await offerService.createOffer({
+        title: formData.title,
+        department: formData.department,
+        description: formData.description,
+        positions: parseInt(formData.positions),
+        duration_weeks: formData.duration === "1 month" ? 4 : formData.duration === "2 months" ? 8 : formData.duration === "3 months" ? 12 : 24,
+        start_date: format(startDate, "yyyy-MM-dd"),
+        end_date: format(endDate, "yyyy-MM-dd"),
+        status: isDraft ? "draft" : "published",
+        requirements: requirements.join(', '),
+        tutor_id: formData.supervisorId || undefined,
+      });
+
+      if (response.success) {
+        toast({
+          title: isDraft ? "Draft Saved" : "Offer Published",
+          description: isDraft 
+            ? "Your internship offer has been saved as a draft." 
+            : "Your internship offer is now live and accepting applications.",
+        });
+        navigate("/hospital/offers");
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "Failed to create offer",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <AppLayout role="hospital" userName="CHU Ibn Sina">
+    <AppLayout role="hospital">
       <div className="space-y-6 max-w-4xl mx-auto">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
@@ -132,7 +177,7 @@ export default function CreateOffer() {
                       <SelectContent>
                         {supervisors.map(sup => (
                           <SelectItem key={sup.id} value={sup.id}>
-                            {sup.name} - {sup.department}
+                            {sup.first_name} {sup.last_name} - {sup.specialty || sup.department}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -297,16 +342,12 @@ export default function CreateOffer() {
                 <CardTitle>Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button className="w-full" onClick={() => handleSubmit(false)}>
+                <Button className="w-full" onClick={() => handleSubmit(false)} disabled={isSubmitting}>
                   <Save className="w-4 h-4 mr-2" />
-                  Publish Offer
+                  {isSubmitting ? "Publishing..." : "Publish Offer"}
                 </Button>
-                <Button variant="outline" className="w-full" onClick={() => handleSubmit(true)}>
+                <Button variant="outline" className="w-full" onClick={() => handleSubmit(true)} disabled={isSubmitting}>
                   Save as Draft
-                </Button>
-                <Button variant="ghost" className="w-full">
-                  <Eye className="w-4 h-4 mr-2" />
-                  Preview
                 </Button>
               </CardContent>
             </Card>

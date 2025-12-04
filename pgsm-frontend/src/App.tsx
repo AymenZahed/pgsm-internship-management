@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme-provider";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 // Pages
 import Index from "./pages/Index";
@@ -28,7 +30,6 @@ import Notifications from "./pages/student/Notifications";
 import StudentSettings from "./pages/student/Settings";
 import InternshipDetails from "./pages/student/InternshipDetails";
 import ApplyInternship from "./pages/student/ApplyInternship";
-
 
 // Hospital Pages
 import HospitalDashboard from "./pages/hospital/Dashboard";
@@ -58,7 +59,6 @@ import DoctorMessages from "./pages/doctor/Messages";
 import DoctorSettings from "./pages/doctor/Settings";
 import DoctorStudentDetails from "./pages/doctor/StudentDetails";
 
-
 // Admin Pages
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminUsers from "./pages/admin/Users";
@@ -77,85 +77,85 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="light" storageKey="pgsm-ui-theme">
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/contact-support" element={<ContactSupport />} />
-            
-            {/* Student Routes */}
-            <Route path="/student/dashboard" element={<StudentDashboard />} />
-            <Route path="/student/internships" element={<InternshipsList />} />
-            <Route path="/student/internships/:id" element={<InternshipDetails />} />
-            <Route path="/student/internships/:id/apply" element={<ApplyInternship />} />
-            <Route path="/student/profile" element={<StudentProfile />} />
-          <Route path="/student/applications" element={<Applications />} />
-          <Route path="/student/applications/:id" element={<ApplicationDetails />} />
-          <Route path="/student/my-internships" element={<MyInternships />} />
-          <Route path="/student/my-internships/:id" element={<MyInternshipDetails />} />
-          <Route path="/student/logbook" element={<Logbook />} />
-          <Route path="/student/attendance" element={<Attendance />} />
-          
-          <Route path="/student/evaluations" element={<Evaluations />} />
-          <Route path="/student/messages" element={<Messages />} />
-          <Route path="/student/notifications" element={<Notifications />} />
-          <Route path="/student/settings" element={<StudentSettings />} />
-          
-          {/* Hospital Routes */}
-          <Route path="/hospital/dashboard" element={<HospitalDashboard />} />
-          <Route path="/hospital/profile" element={<HospitalProfile />} />
-          <Route path="/hospital/services" element={<HospitalServices />} />
-          <Route path="/hospital/services/add" element={<AddService />} />
-          <Route path="/hospital/services/:id" element={<ServiceDetails />} />
-          <Route path="/hospital/offers" element={<HospitalOffers />} />
-          <Route path="/hospital/offers/create" element={<CreateOffer />} />
-          <Route path="/hospital/offers/:id" element={<OfferDetails />} />
-          <Route path="/hospital/applications" element={<HospitalApplications />} />
-          <Route path="/hospital/applications/:id" element={<HospitalApplicationDetails />} />
-          <Route path="/hospital/students" element={<HospitalStudents />} />
-          <Route path="/hospital/students/:id" element={<HospitalStudentDetails />} />
-          <Route path="/hospital/tutors" element={<HospitalTutors />} />
-          <Route path="/hospital/tutors/:id" element={<HospitalTutorDetails />} />
-          <Route path="/hospital/statistics" element={<HospitalStatistics />} />
-          <Route path="/hospital/settings" element={<HospitalSettings />} />
-          
-          {/* Doctor Routes */}
-          <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
-          <Route path="/doctor/profile" element={<DoctorProfile />} />
-          <Route path="/doctor/students" element={<DoctorStudents />} />
-          <Route path="/doctor/students/:id" element={<DoctorStudentDetails />} />
-          <Route path="/doctor/attendance" element={<AttendanceValidation />} />
-          
-          <Route path="/doctor/logbook" element={<LogbookReview />} />
-          <Route path="/doctor/evaluations" element={<DoctorEvaluations />} />
-          <Route path="/doctor/messages" element={<DoctorMessages />} />
-          <Route path="/doctor/settings" element={<DoctorSettings />} />
-          
-          {/* Admin Routes */}
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          <Route path="/admin/users" element={<AdminUsers />} />
-          <Route path="/admin/students" element={<AdminStudents />} />
-          <Route path="/admin/hospitals" element={<AdminHospitals />} />
-          <Route path="/admin/internships" element={<AdminInternships />} />
-          <Route path="/admin/statistics" element={<AdminStatistics />} />
-          <Route path="/admin/reports" element={<AdminReports />} />
-          <Route path="/admin/configuration" element={<AdminConfiguration />} />
-          <Route path="/admin/logs" element={<AdminLogs />} />
-          <Route path="/admin/support" element={<AdminSupport />} />
-          <Route path="/admin/settings" element={<AdminSettings />} />
-          
-          {/* Catch-all */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider defaultTheme="light" storageKey="pgsm-ui-theme">
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/contact-support" element={<ContactSupport />} />
+              
+              {/* Student Routes */}
+              <Route path="/student/dashboard" element={<ProtectedRoute allowedRoles={['student']}><StudentDashboard /></ProtectedRoute>} />
+              <Route path="/student/internships" element={<ProtectedRoute allowedRoles={['student']}><InternshipsList /></ProtectedRoute>} />
+              <Route path="/student/internships/:id" element={<ProtectedRoute allowedRoles={['student']}><InternshipDetails /></ProtectedRoute>} />
+              <Route path="/student/internships/:id/apply" element={<ProtectedRoute allowedRoles={['student']}><ApplyInternship /></ProtectedRoute>} />
+              <Route path="/student/profile" element={<ProtectedRoute allowedRoles={['student']}><StudentProfile /></ProtectedRoute>} />
+              <Route path="/student/applications" element={<ProtectedRoute allowedRoles={['student']}><Applications /></ProtectedRoute>} />
+              <Route path="/student/applications/:id" element={<ProtectedRoute allowedRoles={['student']}><ApplicationDetails /></ProtectedRoute>} />
+              <Route path="/student/my-internships" element={<ProtectedRoute allowedRoles={['student']}><MyInternships /></ProtectedRoute>} />
+              <Route path="/student/my-internships/:id" element={<ProtectedRoute allowedRoles={['student']}><MyInternshipDetails /></ProtectedRoute>} />
+              <Route path="/student/logbook" element={<ProtectedRoute allowedRoles={['student']}><Logbook /></ProtectedRoute>} />
+              <Route path="/student/attendance" element={<ProtectedRoute allowedRoles={['student']}><Attendance /></ProtectedRoute>} />
+              <Route path="/student/evaluations" element={<ProtectedRoute allowedRoles={['student']}><Evaluations /></ProtectedRoute>} />
+              <Route path="/student/messages" element={<ProtectedRoute allowedRoles={['student']}><Messages /></ProtectedRoute>} />
+              <Route path="/student/notifications" element={<ProtectedRoute allowedRoles={['student']}><Notifications /></ProtectedRoute>} />
+              <Route path="/student/settings" element={<ProtectedRoute allowedRoles={['student']}><StudentSettings /></ProtectedRoute>} />
+              
+              {/* Hospital Routes */}
+              <Route path="/hospital/dashboard" element={<ProtectedRoute allowedRoles={['hospital']}><HospitalDashboard /></ProtectedRoute>} />
+              <Route path="/hospital/profile" element={<ProtectedRoute allowedRoles={['hospital']}><HospitalProfile /></ProtectedRoute>} />
+              <Route path="/hospital/services" element={<ProtectedRoute allowedRoles={['hospital']}><HospitalServices /></ProtectedRoute>} />
+              <Route path="/hospital/services/add" element={<ProtectedRoute allowedRoles={['hospital']}><AddService /></ProtectedRoute>} />
+              <Route path="/hospital/services/:id" element={<ProtectedRoute allowedRoles={['hospital']}><ServiceDetails /></ProtectedRoute>} />
+              <Route path="/hospital/offers" element={<ProtectedRoute allowedRoles={['hospital']}><HospitalOffers /></ProtectedRoute>} />
+              <Route path="/hospital/offers/create" element={<ProtectedRoute allowedRoles={['hospital']}><CreateOffer /></ProtectedRoute>} />
+              <Route path="/hospital/offers/:id" element={<ProtectedRoute allowedRoles={['hospital']}><OfferDetails /></ProtectedRoute>} />
+              <Route path="/hospital/applications" element={<ProtectedRoute allowedRoles={['hospital']}><HospitalApplications /></ProtectedRoute>} />
+              <Route path="/hospital/applications/:id" element={<ProtectedRoute allowedRoles={['hospital']}><HospitalApplicationDetails /></ProtectedRoute>} />
+              <Route path="/hospital/students" element={<ProtectedRoute allowedRoles={['hospital']}><HospitalStudents /></ProtectedRoute>} />
+              <Route path="/hospital/students/:id" element={<ProtectedRoute allowedRoles={['hospital']}><HospitalStudentDetails /></ProtectedRoute>} />
+              <Route path="/hospital/tutors" element={<ProtectedRoute allowedRoles={['hospital']}><HospitalTutors /></ProtectedRoute>} />
+              <Route path="/hospital/tutors/:id" element={<ProtectedRoute allowedRoles={['hospital']}><HospitalTutorDetails /></ProtectedRoute>} />
+              <Route path="/hospital/statistics" element={<ProtectedRoute allowedRoles={['hospital']}><HospitalStatistics /></ProtectedRoute>} />
+              <Route path="/hospital/settings" element={<ProtectedRoute allowedRoles={['hospital']}><HospitalSettings /></ProtectedRoute>} />
+              
+              {/* Doctor Routes */}
+              <Route path="/doctor/dashboard" element={<ProtectedRoute allowedRoles={['doctor']}><DoctorDashboard /></ProtectedRoute>} />
+              <Route path="/doctor/profile" element={<ProtectedRoute allowedRoles={['doctor']}><DoctorProfile /></ProtectedRoute>} />
+              <Route path="/doctor/students" element={<ProtectedRoute allowedRoles={['doctor']}><DoctorStudents /></ProtectedRoute>} />
+              <Route path="/doctor/students/:id" element={<ProtectedRoute allowedRoles={['doctor']}><DoctorStudentDetails /></ProtectedRoute>} />
+              <Route path="/doctor/attendance" element={<ProtectedRoute allowedRoles={['doctor']}><AttendanceValidation /></ProtectedRoute>} />
+              <Route path="/doctor/logbook" element={<ProtectedRoute allowedRoles={['doctor']}><LogbookReview /></ProtectedRoute>} />
+              <Route path="/doctor/evaluations" element={<ProtectedRoute allowedRoles={['doctor']}><DoctorEvaluations /></ProtectedRoute>} />
+              <Route path="/doctor/messages" element={<ProtectedRoute allowedRoles={['doctor']}><DoctorMessages /></ProtectedRoute>} />
+              <Route path="/doctor/settings" element={<ProtectedRoute allowedRoles={['doctor']}><DoctorSettings /></ProtectedRoute>} />
+              
+              {/* Admin Routes */}
+              <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
+              <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['admin']}><AdminUsers /></ProtectedRoute>} />
+              <Route path="/admin/students" element={<ProtectedRoute allowedRoles={['admin']}><AdminStudents /></ProtectedRoute>} />
+              <Route path="/admin/hospitals" element={<ProtectedRoute allowedRoles={['admin']}><AdminHospitals /></ProtectedRoute>} />
+              <Route path="/admin/internships" element={<ProtectedRoute allowedRoles={['admin']}><AdminInternships /></ProtectedRoute>} />
+              <Route path="/admin/statistics" element={<ProtectedRoute allowedRoles={['admin']}><AdminStatistics /></ProtectedRoute>} />
+              <Route path="/admin/reports" element={<ProtectedRoute allowedRoles={['admin']}><AdminReports /></ProtectedRoute>} />
+              <Route path="/admin/configuration" element={<ProtectedRoute allowedRoles={['admin']}><AdminConfiguration /></ProtectedRoute>} />
+              <Route path="/admin/logs" element={<ProtectedRoute allowedRoles={['admin']}><AdminLogs /></ProtectedRoute>} />
+              <Route path="/admin/support" element={<ProtectedRoute allowedRoles={['admin']}><AdminSupport /></ProtectedRoute>} />
+              <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={['admin']}><AdminSettings /></ProtectedRoute>} />
+              
+              {/* Catch-all */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </ThemeProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

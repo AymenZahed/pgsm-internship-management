@@ -4,67 +4,89 @@ import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
-import { Users, CalendarCheck, BookOpen, Star, ArrowRight, Clock, AlertTriangle } from "lucide-react";
+import { Users, CalendarCheck, BookOpen, Star, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { tutorService } from "@/services/tutor.service";
+import { LoadingState, ErrorState } from "@/components/ui/loading-state";
 
-const mockStats = {
-  currentStudents: 6,
-  pendingAttendance: 3,
-  logbooksToReview: 5,
-  pendingEvaluations: 2,
-};
-
-const mockStudents = [
-  { id: "1", name: "Ahmed Benali", year: "4th Year", period: "Jan 15 - Mar 15", attendance: 92, avatar: "" },
-  { id: "2", name: "Fatima Zahra", year: "5th Year", period: "Jan 10 - Mar 10", attendance: 88, avatar: "" },
-  { id: "3", name: "Omar Hassan", year: "4th Year", period: "Jan 20 - Mar 20", attendance: 95, avatar: "" },
-  { id: "4", name: "Laila Amrani", year: "3rd Year", period: "Feb 1 - Apr 1", attendance: 78, avatar: "" },
-];
-
-const mockPendingTasks = [
-  { id: "1", type: "attendance", student: "Ahmed Benali", description: "Validate attendance for Dec 15", urgent: true },
-  { id: "2", type: "logbook", student: "Fatima Zahra", description: "Review logbook entry", urgent: false },
-  { id: "3", type: "evaluation", student: "Omar Hassan", description: "Mid-term evaluation due", urgent: true },
-  { id: "4", type: "attendance", student: "Laila Amrani", description: "Validate attendance for Dec 14", urgent: false },
-];
-
-const mockActivities = [
-  {
-    id: "1",
-    type: "evaluation" as const,
-    title: "Evaluation Completed",
-    description: "Final evaluation for Mohamed Ali",
-    time: "1h ago",
-    status: "success" as const,
-  },
-  {
-    id: "2",
-    type: "application" as const,
-    title: "Logbook Approved",
-    description: "Approved logbook entry for Fatima",
-    time: "3h ago",
-    status: "default" as const,
-  },
-  {
-    id: "3",
-    type: "message" as const,
-    title: "New Message",
-    description: "Ahmed Benali sent you a question",
-    time: "1 day ago",
-    status: "info" as const,
-  },
-];
+interface DashboardData {
+  stats: {
+    current_students: number;
+    pending_attendance: number;
+    logbooks_to_review: number;
+    pending_evaluations: number;
+  };
+  students: any[];
+  pending_tasks: any[];
+  activities: any[];
+}
 
 export default function DoctorDashboard() {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const response = await tutorService.getDashboard();
+        if (response.success) {
+          setDashboardData(response.data);
+        }
+      } catch (err: any) {
+        setError(err.message || "Failed to load dashboard");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <AppLayout role="doctor">
+        <LoadingState message="Loading dashboard..." />
+      </AppLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AppLayout role="doctor">
+        <ErrorState message={error} onRetry={() => window.location.reload()} />
+      </AppLayout>
+    );
+  }
+
+  const stats = dashboardData?.stats || {
+    current_students: 0,
+    pending_attendance: 0,
+    logbooks_to_review: 0,
+    pending_evaluations: 0,
+  };
+
+  const students = dashboardData?.students || [];
+  const pendingTasks = dashboardData?.pending_tasks || [];
+
+  const activities = (dashboardData?.activities || []).map((a: any, i: number) => ({
+    id: String(i),
+    type: a.type || "application",
+    title: a.title,
+    description: a.description,
+    time: a.time || new Date(a.created_at).toLocaleDateString(),
+    status: a.status || "default",
+  }));
 
   return (
-    <AppLayout role="doctor" userName="Dr. Hassan Benjelloun">
+    <AppLayout role="doctor">
       <div className="space-y-8">
         {/* Page Header */}
         <div className="page-header">
-          <h1 className="page-title">Welcome back, Dr. Hassan!</h1>
+          <h1 className="page-title">Doctor Dashboard</h1>
           <p className="page-subtitle">Here's an overview of your students and pending tasks</p>
         </div>
 
@@ -72,7 +94,7 @@ export default function DoctorDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title="Current Students"
-            value={mockStats.currentStudents}
+            value={stats.current_students}
             subtitle="Under your supervision"
             icon={Users}
             variant="primary"
@@ -80,7 +102,7 @@ export default function DoctorDashboard() {
           />
           <StatCard
             title="Pending Attendance"
-            value={mockStats.pendingAttendance}
+            value={stats.pending_attendance}
             subtitle="Needs validation"
             icon={CalendarCheck}
             variant="warning"
@@ -88,7 +110,7 @@ export default function DoctorDashboard() {
           />
           <StatCard
             title="Logbooks to Review"
-            value={mockStats.logbooksToReview}
+            value={stats.logbooks_to_review}
             subtitle="Awaiting approval"
             icon={BookOpen}
             variant="info"
@@ -96,7 +118,7 @@ export default function DoctorDashboard() {
           />
           <StatCard
             title="Pending Evaluations"
-            value={mockStats.pendingEvaluations}
+            value={stats.pending_evaluations}
             subtitle="Due this week"
             icon={Star}
             variant="success"
@@ -109,13 +131,13 @@ export default function DoctorDashboard() {
           {/* Pending Tasks */}
           <div className="lg:col-span-2 space-y-6">
             {/* Urgent Tasks Alert */}
-            {mockPendingTasks.some((t) => t.urgent) && (
+            {pendingTasks.some((t: any) => t.urgent) && (
               <div className="bg-warning/10 border border-warning/30 rounded-xl p-4 flex items-start gap-3">
                 <AlertTriangle className="w-5 h-5 text-warning mt-0.5" />
                 <div className="flex-1">
                   <h3 className="font-medium text-warning-foreground">Urgent Tasks</h3>
                   <p className="text-sm text-muted-foreground mt-1">
-                    You have {mockPendingTasks.filter((t) => t.urgent).length} urgent tasks requiring immediate attention
+                    You have {pendingTasks.filter((t: any) => t.urgent).length} urgent tasks requiring immediate attention
                   </p>
                 </div>
               </div>
@@ -125,49 +147,53 @@ export default function DoctorDashboard() {
             <div className="stat-card">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="font-semibold text-lg text-foreground">Pending Tasks</h3>
-                <Badge variant="secondary">{mockPendingTasks.length} pending</Badge>
+                <Badge variant="secondary">{pendingTasks.length} pending</Badge>
               </div>
               
               <div className="space-y-3">
-                {mockPendingTasks.map((task, index) => (
-                  <div
-                    key={task.id}
-                    className={`flex items-center gap-4 p-4 rounded-lg border transition-all animate-fade-in ${
-                      task.urgent
-                        ? "bg-warning/5 border-warning/30"
-                        : "bg-muted/30 border-border"
-                    }`}
-                    style={{ animationDelay: `${index * 50}ms` }}
-                  >
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      task.type === "attendance" ? "bg-primary/10 text-primary" :
-                      task.type === "logbook" ? "bg-info/10 text-info" :
-                      "bg-success/10 text-success"
-                    }`}>
-                      {task.type === "attendance" ? <CalendarCheck className="w-5 h-5" /> :
-                       task.type === "logbook" ? <BookOpen className="w-5 h-5" /> :
-                       <Star className="w-5 h-5" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground">{task.student}</p>
-                      <p className="text-sm text-muted-foreground truncate">{task.description}</p>
-                    </div>
-                    {task.urgent && (
-                      <Badge variant="destructive" className="animate-pulse-soft">Urgent</Badge>
-                    )}
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => {
-                        if (task.type === "attendance") navigate("/doctor/attendance");
-                        else if (task.type === "logbook") navigate("/doctor/logbook");
-                        else if (task.type === "evaluation") navigate("/doctor/evaluations");
-                      }}
+                {pendingTasks.length === 0 ? (
+                  <p className="text-center py-4 text-muted-foreground">No pending tasks</p>
+                ) : (
+                  pendingTasks.map((task: any, index: number) => (
+                    <div
+                      key={task.id || index}
+                      className={`flex items-center gap-4 p-4 rounded-lg border transition-all animate-fade-in ${
+                        task.urgent
+                          ? "bg-warning/5 border-warning/30"
+                          : "bg-muted/30 border-border"
+                      }`}
+                      style={{ animationDelay: `${index * 50}ms` }}
                     >
-                      Take Action
-                    </Button>
-                  </div>
-                ))}
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                        task.type === "attendance" ? "bg-primary/10 text-primary" :
+                        task.type === "logbook" ? "bg-info/10 text-info" :
+                        "bg-success/10 text-success"
+                      }`}>
+                        {task.type === "attendance" ? <CalendarCheck className="w-5 h-5" /> :
+                         task.type === "logbook" ? <BookOpen className="w-5 h-5" /> :
+                         <Star className="w-5 h-5" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground">{task.student_name || task.student}</p>
+                        <p className="text-sm text-muted-foreground truncate">{task.description}</p>
+                      </div>
+                      {task.urgent && (
+                        <Badge variant="destructive" className="animate-pulse-soft">Urgent</Badge>
+                      )}
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          if (task.type === "attendance") navigate("/doctor/attendance");
+                          else if (task.type === "logbook") navigate("/doctor/logbook");
+                          else if (task.type === "evaluation") navigate("/doctor/evaluations");
+                        }}
+                      >
+                        Take Action
+                      </Button>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -184,37 +210,45 @@ export default function DoctorDashboard() {
               </div>
               
               <div className="space-y-4">
-                {mockStudents.slice(0, 4).map((student) => (
-                  <div key={student.id} className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={student.avatar} />
-                      <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                        {student.name.split(" ").map((n) => n[0]).join("")}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{student.name}</p>
-                      <p className="text-xs text-muted-foreground">{student.year}</p>
+                {students.length === 0 ? (
+                  <p className="text-center py-4 text-muted-foreground">No students assigned</p>
+                ) : (
+                  students.slice(0, 4).map((student: any) => (
+                    <div key={student.id} className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={student.avatar} />
+                        <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                          {student.name?.split(" ").map((n: string) => n[0]).join("") || student.first_name?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{student.name || `${student.first_name} ${student.last_name}`}</p>
+                        <p className="text-xs text-muted-foreground">{student.year || student.university}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-sm font-medium ${
+                          (student.attendance || student.attendance_rate) >= 90 ? "text-success" :
+                          (student.attendance || student.attendance_rate) >= 80 ? "text-warning" :
+                          "text-destructive"
+                        }`}>
+                          {student.attendance || student.attendance_rate || 0}%
+                        </p>
+                        <p className="text-xs text-muted-foreground">Attendance</p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className={`text-sm font-medium ${
-                        student.attendance >= 90 ? "text-success" :
-                        student.attendance >= 80 ? "text-warning" :
-                        "text-destructive"
-                      }`}>
-                        {student.attendance}%
-                      </p>
-                      <p className="text-xs text-muted-foreground">Attendance</p>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
 
             {/* Recent Activity */}
             <div className="stat-card">
               <h3 className="font-semibold text-foreground mb-4">Recent Activity</h3>
-              <ActivityFeed activities={mockActivities} />
+              {activities.length > 0 ? (
+                <ActivityFeed activities={activities} />
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">No recent activity</p>
+              )}
             </div>
           </div>
         </div>
