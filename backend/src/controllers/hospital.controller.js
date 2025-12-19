@@ -215,7 +215,7 @@ const updateHospitalProfile = async (req, res, next) => {
         logo = COALESCE(?, logo)
        WHERE user_id = ?`,
       [updates.name, updates.type, updates.description, updates.address, updates.city,
-       updates.phone, updates.email, updates.website, updates.logo, req.user.id]
+      updates.phone, updates.email, updates.website, updates.logo, req.user.id]
     );
 
     // Update user phone if provided
@@ -241,12 +241,12 @@ const getHospitalStudents = async (req, res, next) => {
     }
     const hospitalId = hospitals[0].id;
 
-    const { status = 'active', search, department } = req.query;
+    const { status, search, department } = req.query;
 
     let whereClause = 'i.hospital_id = ?';
     const params = [hospitalId];
 
-    if (status) {
+    if (status && status !== 'all') {
       whereClause += ' AND i.status = ?';
       params.push(status);
     }
@@ -263,7 +263,7 @@ const getHospitalStudents = async (req, res, next) => {
 
     const [students] = await db.query(`
       SELECT i.*, s.student_number, s.faculty, s.academic_year,
-             u.first_name, u.last_name, u.email, u.phone, u.avatar,
+             u.id as user_id, u.first_name, u.last_name, u.email, u.phone, u.avatar,
              sv.name as service_name, sv.department,
              CONCAT(tu.first_name, ' ', tu.last_name) as tutor_name
       FROM internships i

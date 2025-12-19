@@ -19,8 +19,13 @@ const logbookRoutes = require('./routes/logbook.routes');
 const tutorRoutes = require('./routes/tutor.routes');
 const notificationRoutes = require('./routes/notification.routes');
 const adminRoutes = require('./routes/admin.routes');
+const supportRoutes = require('./routes/support.routes');
+const { startScheduler } = require('./utils/scheduler');
 
 const app = express();
+
+// Start background tasks
+startScheduler();
 
 // Middleware
 app.use(cors());
@@ -46,6 +51,7 @@ app.use('/api/logbook', logbookRoutes);
 app.use('/api/tutors', tutorRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/support', supportRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

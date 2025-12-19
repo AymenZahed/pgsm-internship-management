@@ -190,6 +190,25 @@ const sendMessage = async (req, res, next) => {
       );
     }, 1000);
 
+    // Notify recipient(s)
+    const { createNotification } = require('./notification.controller');
+
+    // Get other participants to notify
+    const [recipients] = await db.query(
+      'SELECT user_id FROM conversation_participants WHERE conversation_id = ? AND user_id != ?',
+      [conversation_id, req.user.id]
+    );
+
+    for (const recipient of recipients) {
+      await createNotification(
+        recipient.user_id,
+        'message',
+        'New Message',
+        'You have received a new message.',
+        { conversation_id, message_id: messageId }
+      );
+    }
+
     res.status(201).json({
       success: true,
       message: 'Message sent',

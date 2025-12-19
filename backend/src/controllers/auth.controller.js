@@ -105,8 +105,29 @@ const login = async (req, res, next) => {
       });
     }
 
+    // Check Maintenance Mode
+    const [config] = await db.query('SELECT value FROM system_config WHERE `key` = "maintenanceMode"');
+    const maintenanceMode = config[0]?.value === 'true';
+
+    if (maintenanceMode && user.role !== 'admin') {
+      return res.status(503).json({
+        success: false,
+        message: 'System is currently under maintenance. Only administrators can log in.'
+      });
+    }
+
     // Update last login
     await db.query('UPDATE users SET last_login = NOW() WHERE id = ?', [user.id]);
+
+    // Notify user of new login
+    // Note: To avoid spam, we might usually check IP, but user requested "New Login" notification
+    const { createNotification } = require('./notification.controller');
+    createNotification(
+      user.id,
+      'security',
+      'New Login Detected',
+      `A new login to your account was detected at ${new Date().toLocaleString()}.`
+    ).catch(err => console.error('Login notification error:', err)); // Non-blocking
 
     const token = generateToken(user.id, user.role);
 
@@ -182,7 +203,7 @@ const changePassword = async (req, res, next) => {
     const { current_password, new_password } = req.body;
 
     const [users] = await db.query('SELECT password FROM users WHERE id = ?', [req.user.id]);
-    
+
     const isValid = await comparePassword(current_password, users[0].password);
     if (!isValid) {
       return res.status(400).json({
@@ -193,6 +214,14 @@ const changePassword = async (req, res, next) => {
 
     const hashedPassword = await hashPassword(new_password);
     await db.query('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, req.user.id]);
+
+    const { createNotification } = require('./notification.controller');
+    await createNotification(
+      req.user.id,
+      'security',
+      'Password Changed',
+      'Your password was successfully changed. If this wasn\'t you, please contact support immediately.'
+    );
 
     res.json({
       success: true,
@@ -207,16 +236,41 @@ const changePassword = async (req, res, next) => {
 const forgotPassword = async (req, res, next) => {
   try {
     const { email } = req.body;
+    const crypto = require('crypto');
+    const { sendEmail } = require('../utils/email.service');
 
-    const [users] = await db.query('SELECT id FROM users WHERE email = ?', [email]);
-    
+    const [users] = await db.query('SELECT id, email, first_name FROM users WHERE email = ?', [email]);
+
+    if (users.length > 0) {
+      const user = users[0];
+      const rawPassword = crypto.randomBytes(4).toString('hex'); // 8 characters
+      const hashedPassword = await hashPassword(rawPassword);
+
+      await db.query('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, user.id]);
+
+      await sendEmail({
+        to: user.email,
+        subject: 'PGSM - Reset Password',
+        html: `
+          <div style="font-family: Arial, sans-serif; color: #333;">
+            <h2>Password Reset Request</h2>
+            <p>Hello ${user.first_name},</p>
+            <p>Your password has been reset as requested. Your new temporary password is:</p>
+            <h3 style="background: #f4f4f4; padding: 10px; border-radius: 5px; display: inline-block;">${rawPassword}</h3>
+            <p>Please log in using this password and change it immediately in your settings.</p>
+            <br>
+            <p>Best regards,<br>PGSM Team</p>
+          </div>
+        `
+      });
+    }
+
     // Always return success to prevent email enumeration
     res.json({
       success: true,
-      message: 'If the email exists, a password reset link will be sent'
+      message: 'If the email exists, a new password has been sent.'
     });
 
-    // In production, send actual email here
   } catch (error) {
     next(error);
   }

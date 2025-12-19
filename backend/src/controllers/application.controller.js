@@ -39,10 +39,16 @@ const createApplication = async (req, res, next) => {
     }
 
     const id = generateId();
+
+    // Normalize availability_date: store NULL when not provided
+    const dbAvailabilityDate = availability_date && availability_date.trim() !== ''
+      ? availability_date
+      : null;
+
     await db.query(
       `INSERT INTO applications (id, student_id, offer_id, cover_letter, motivation, experience, availability_date)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [id, studentId, offer_id, cover_letter, motivation, experience, availability_date]
+      [id, studentId, offer_id, cover_letter, motivation, experience, dbAvailabilityDate]
     );
 
     // Notify hospital
@@ -115,7 +121,7 @@ const getApplicationById = async (req, res, next) => {
       `SELECT a.*, o.title as offer_title, o.description as offer_description, 
               o.department, o.start_date, o.end_date, o.requirements, o.type,
               h.name as hospital_name, h.city as hospital_city, h.address as hospital_address,
-              s.student_number, s.faculty, s.academic_year,
+              s.student_number, s.faculty, s.academic_year, s.user_id as student_user_id,
               u.first_name, u.last_name, u.email, u.phone, u.avatar
        FROM applications a
        JOIN stage_offers o ON o.id = a.offer_id
@@ -130,17 +136,29 @@ const getApplicationById = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
 
-    // Get attached documents
-    const [documents] = await db.query(
+    const application = applications[0];
+
+    // Get attached application-specific documents
+    const [applicationDocuments] = await db.query(
       'SELECT * FROM documents WHERE application_id = ?',
       [id]
+    );
+
+    // Get profile-level documents for this student (reusable profile docs)
+    const [profileDocuments] = await db.query(
+      `SELECT d.*
+       FROM documents d
+       WHERE d.user_id = ? AND d.application_id IS NULL
+       ORDER BY d.created_at DESC`,
+      [application.student_user_id]
     );
 
     res.json({
       success: true,
       data: {
-        ...applications[0],
-        documents
+        ...application,
+        application_documents: applicationDocuments,
+        profile_documents: profileDocuments
       }
     });
   } catch (error) {
@@ -263,13 +281,13 @@ const updateApplicationStatus = async (req, res, next) => {
     );
 
     // Notify student
-    const notificationTitle = status === 'accepted' ? 'Application Accepted!' : 
-                              status === 'rejected' ? 'Application Update' : 'Application Under Review';
-    const notificationMessage = status === 'accepted' ? 
+    const notificationTitle = status === 'accepted' ? 'Application Accepted!' :
+      status === 'rejected' ? 'Application Update' : 'Application Under Review';
+    const notificationMessage = status === 'accepted' ?
       `Congratulations! Your application for "${application.title}" has been accepted.` :
       status === 'rejected' ?
-      `Your application for "${application.title}" was not selected.${rejection_reason ? ' Reason: ' + rejection_reason : ''}` :
-      `Your application for "${application.title}" is now under review.`;
+        `Your application for "${application.title}" was not selected.${rejection_reason ? ' Reason: ' + rejection_reason : ''}` :
+        `Your application for "${application.title}" is now under review.`;
 
     await createNotification(application.student_user_id, 'application', notificationTitle, notificationMessage, { application_id: id });
 
@@ -277,12 +295,14 @@ const updateApplicationStatus = async (req, res, next) => {
     if (status === 'accepted') {
       const internshipId = generateId();
       const [offer] = await db.query('SELECT * FROM stage_offers WHERE id = ?', [application.offer_id]);
-      
+
+      const internshipStatus = new Date(offer[0].start_date) <= new Date() ? 'active' : 'upcoming';
+
       await db.query(
-        `INSERT INTO internships (id, application_id, student_id, hospital_id, service_id, start_date, end_date)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [internshipId, id, application.student_id, application.hospital_id, 
-         offer[0].service_id, offer[0].start_date, offer[0].end_date]
+        `INSERT INTO internships (id, application_id, student_id, hospital_id, service_id, start_date, end_date, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [internshipId, id, application.student_id, application.hospital_id,
+          offer[0].service_id, offer[0].start_date, offer[0].end_date, internshipStatus]
       );
 
       // Update filled positions
@@ -321,11 +341,12 @@ const withdrawApplication = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Cannot withdraw accepted application' });
     }
 
-    await db.query('UPDATE applications SET status = "withdrawn" WHERE id = ?', [id]);
+    // Fully remove application from database
+    await db.query('DELETE FROM applications WHERE id = ?', [id]);
 
     res.json({
       success: true,
-      message: 'Application withdrawn successfully'
+      message: 'Application withdrawn and removed successfully'
     });
   } catch (error) {
     next(error);

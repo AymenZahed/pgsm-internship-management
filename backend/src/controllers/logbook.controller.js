@@ -34,6 +34,19 @@ const createEntry = async (req, res, next) => {
       message: 'Logbook entry created successfully',
       data: { id }
     });
+
+    const { createNotification } = require('./notification.controller');
+    // Find Tutor
+    const [internship] = await db.query('SELECT tutor_id FROM internships WHERE id = ?', [internship_id]);
+    if (internship.length > 0 && internship[0].tutor_id) {
+      await createNotification(
+        internship[0].tutor_id,
+        'logbook',
+        'New Logbook Entry',
+        'A student has submitted a new logbook entry for review.',
+        { entry_id: id, internship_id }
+      );
+    }
   } catch (error) {
     next(error);
   }
@@ -193,9 +206,10 @@ const getPendingEntries = async (req, res, next) => {
        JOIN students s ON s.id = l.student_id
        JOIN users u ON u.id = s.user_id
        JOIN hospitals h ON h.id = i.hospital_id
-       WHERE i.tutor_id = ? AND l.status = 'pending'
+       LEFT JOIN services sv ON sv.id = i.service_id
+       WHERE (i.tutor_id = ? OR sv.head_doctor_id = ?) AND l.status = 'pending'
        ORDER BY l.date DESC`,
-      [doctors[0].id]
+      [doctors[0].id, doctors[0].id]
     );
 
     res.json({
@@ -219,8 +233,9 @@ const reviewEntry = async (req, res, next) => {
     }
 
     const [entry] = await db.query(
-      `SELECT l.*, i.tutor_id FROM logbook_entries l
+      `SELECT l.*, i.tutor_id, sv.head_doctor_id FROM logbook_entries l
        JOIN internships i ON i.id = l.internship_id
+       LEFT JOIN services sv ON sv.id = i.service_id
        WHERE l.id = ?`,
       [id]
     );
@@ -230,7 +245,7 @@ const reviewEntry = async (req, res, next) => {
     }
 
     const [doctors] = await db.query('SELECT id FROM doctors WHERE user_id = ?', [req.user.id]);
-    if (entry[0].tutor_id !== doctors[0]?.id && req.user.role !== 'admin') {
+    if (entry[0].tutor_id !== doctors[0]?.id && entry[0].head_doctor_id !== doctors[0]?.id && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
@@ -263,9 +278,10 @@ const getReviewedEntries = async (req, res, next) => {
        JOIN internships i ON i.id = l.internship_id
        JOIN students s ON s.id = l.student_id
        JOIN users u ON u.id = s.user_id
-       WHERE i.tutor_id = ? AND l.status != 'pending'
+       LEFT JOIN services sv ON sv.id = i.service_id
+       WHERE (i.tutor_id = ? OR sv.head_doctor_id = ?) AND l.status != 'pending'
        ORDER BY l.reviewed_at DESC`,
-      [doctors[0].id]
+      [doctors[0].id, doctors[0].id]
     );
 
     res.json({

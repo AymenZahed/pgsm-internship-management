@@ -64,14 +64,14 @@ const updateProfile = async (req, res, next) => {
     if (req.user.role === 'student' && Object.keys(profileData).length > 0) {
       const fields = [];
       const values = [];
-      
-      ['student_number', 'faculty', 'department', 'academic_year', 'date_of_birth', 
-       'address', 'city', 'emergency_contact', 'emergency_phone', 'bio'].forEach(field => {
-        if (profileData[field] !== undefined) {
-          fields.push(`${field} = ?`);
-          values.push(profileData[field]);
-        }
-      });
+
+      ['student_number', 'faculty', 'department', 'academic_year', 'date_of_birth',
+        'address', 'city', 'emergency_contact', 'emergency_phone', 'bio'].forEach(field => {
+          if (profileData[field] !== undefined) {
+            fields.push(`${field} = ?`);
+            values.push(profileData[field]);
+          }
+        });
 
       if (fields.length > 0) {
         values.push(req.user.id);
@@ -83,14 +83,14 @@ const updateProfile = async (req, res, next) => {
     } else if (req.user.role === 'doctor' && Object.keys(profileData).length > 0) {
       const fields = [];
       const values = [];
-      
-      ['specialization', 'department', 'title', 'license_number', 'years_experience', 
-       'bio', 'is_available', 'max_students'].forEach(field => {
-        if (profileData[field] !== undefined) {
-          fields.push(`${field} = ?`);
-          values.push(profileData[field]);
-        }
-      });
+
+      ['specialization', 'department', 'title', 'license_number', 'years_experience',
+        'bio', 'is_available', 'max_students'].forEach(field => {
+          if (profileData[field] !== undefined) {
+            fields.push(`${field} = ?`);
+            values.push(profileData[field]);
+          }
+        });
 
       if (fields.length > 0) {
         values.push(req.user.id);
@@ -102,14 +102,14 @@ const updateProfile = async (req, res, next) => {
     } else if (req.user.role === 'hospital' && Object.keys(profileData).length > 0) {
       const fields = [];
       const values = [];
-      
-      ['name', 'type', 'address', 'city', 'postal_code', 'phone', 'email', 
-       'website', 'description', 'capacity'].forEach(field => {
-        if (profileData[field] !== undefined) {
-          fields.push(`${field} = ?`);
-          values.push(profileData[field]);
-        }
-      });
+
+      ['name', 'type', 'address', 'city', 'postal_code', 'phone', 'email',
+        'website', 'description', 'capacity'].forEach(field => {
+          if (profileData[field] !== undefined) {
+            fields.push(`${field} = ?`);
+            values.push(profileData[field]);
+          }
+        });
 
       if (fields.length > 0) {
         values.push(req.user.id);
@@ -164,10 +164,16 @@ const getSettings = async (req, res, next) => {
       // Create default settings
       const id = uuidv4();
       await db.query('INSERT INTO settings (id, user_id) VALUES (?, ?)', [id, req.user.id]);
-      
+
+      // Fetch the newly created settings to get default values from DB schema
+      const [newSettings] = await db.query(
+        'SELECT * FROM settings WHERE user_id = ?',
+        [req.user.id]
+      );
+
       return res.json({
         success: true,
-        data: { language: 'fr', theme: 'system', email_notifications: true, push_notifications: true }
+        data: newSettings[0]
       });
     }
 
@@ -183,12 +189,31 @@ const getSettings = async (req, res, next) => {
 // Update user settings
 const updateSettings = async (req, res, next) => {
   try {
-    const { language, theme, email_notifications, push_notifications, sms_notifications } = req.body;
+    const allowedFields = [
+      'language', 'theme', 'email_notifications', 'push_notifications', 'sms_notifications',
+      'student_updates', 'logbook_alerts', 'message_alerts', 'evaluation_reminders', 'daily_digest',
+      'two_factor_enabled', 'session_timeout', 'login_alerts', 'timezone', 'date_format'
+    ];
+
+    const fields = [];
+    const values = [];
+
+    Object.keys(req.body).forEach(key => {
+      if (allowedFields.includes(key)) {
+        fields.push(`${key} = ?`);
+        values.push(req.body[key]);
+      }
+    });
+
+    if (fields.length === 0) {
+      return res.status(400).json({ success: false, message: 'No valid settings provided' });
+    }
+
+    values.push(req.user.id);
 
     await db.query(
-      `UPDATE settings SET language = ?, theme = ?, email_notifications = ?, 
-       push_notifications = ?, sms_notifications = ? WHERE user_id = ?`,
-      [language, theme, email_notifications, push_notifications, sms_notifications, req.user.id]
+      `UPDATE settings SET ${fields.join(', ')} WHERE user_id = ?`,
+      values
     );
 
     res.json({

@@ -63,6 +63,87 @@ const getAllOffers = async (req, res, next) => {
   }
 };
 
+// Publish offer (set status to 'published')
+const publishOffer = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const [hospitals] = await db.query('SELECT id FROM hospitals WHERE user_id = ?', [req.user.id]);
+    const [offer] = await db.query('SELECT hospital_id FROM stage_offers WHERE id = ?', [id]);
+
+    if (offer.length === 0) {
+      return res.status(404).json({ success: false, message: 'Offer not found' });
+    }
+
+    if (req.user.role === 'hospital' && offer[0].hospital_id !== hospitals[0]?.id) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    await db.query('UPDATE stage_offers SET status = "published" WHERE id = ?', [id]);
+
+    res.json({
+      success: true,
+      message: 'Offer published successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Close offer (set status to 'closed')
+const closeOffer = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const [hospitals] = await db.query('SELECT id FROM hospitals WHERE user_id = ?', [req.user.id]);
+    const [offer] = await db.query('SELECT hospital_id FROM stage_offers WHERE id = ?', [id]);
+
+    if (offer.length === 0) {
+      return res.status(404).json({ success: false, message: 'Offer not found' });
+    }
+
+    if (req.user.role === 'hospital' && offer[0].hospital_id !== hospitals[0]?.id) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    await db.query('UPDATE stage_offers SET status = "closed" WHERE id = ?', [id]);
+
+    res.json({
+      success: true,
+      message: 'Offer closed successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Cancel offer (set status to 'cancelled')
+const cancelOffer = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const [hospitals] = await db.query('SELECT id FROM hospitals WHERE user_id = ?', [req.user.id]);
+    const [offer] = await db.query('SELECT hospital_id FROM stage_offers WHERE id = ?', [id]);
+
+    if (offer.length === 0) {
+      return res.status(404).json({ success: false, message: 'Offer not found' });
+    }
+
+    if (req.user.role === 'hospital' && offer[0].hospital_id !== hospitals[0]?.id) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    await db.query('UPDATE stage_offers SET status = "cancelled" WHERE id = ?', [id]);
+
+    res.json({
+      success: true,
+      message: 'Offer cancelled successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Get offer by ID
 const getOfferById = async (req, res, next) => {
   try {
@@ -159,9 +240,9 @@ const getHospitalOffers = async (req, res, next) => {
 // Create offer
 const createOffer = async (req, res, next) => {
   try {
-    const { title, description, requirements, responsibilities, department, type, 
-            duration_weeks, positions, start_date, end_date, application_deadline, 
-            service_id, tutor_id, skills_required, benefits, status } = req.body;
+    const { title, description, requirements, responsibilities, department, type,
+      duration_weeks, positions, start_date, end_date, application_deadline,
+      service_id, tutor_id, skills_required, benefits, status } = req.body;
 
     const [hospitals] = await db.query('SELECT id FROM hospitals WHERE user_id = ?', [req.user.id]);
     if (hospitals.length === 0) {
@@ -175,9 +256,9 @@ const createOffer = async (req, res, next) => {
        responsibilities, department, type, duration_weeks, positions, start_date, end_date, 
        application_deadline, skills_required, benefits, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, hospitalId, service_id, tutor_id, title, description, requirements, responsibilities, 
-       department, type || 'required', duration_weeks, positions || 1, start_date, end_date, 
-       application_deadline, JSON.stringify(skills_required || []), benefits, status || 'draft']
+      [id, hospitalId, service_id, tutor_id, title, description, requirements, responsibilities,
+        department, type || 'required', duration_weeks, positions || 1, start_date, end_date,
+        application_deadline, JSON.stringify(skills_required || []), benefits, status || 'draft']
     );
 
     res.status(201).json({
@@ -199,7 +280,7 @@ const updateOffer = async (req, res, next) => {
     // Verify ownership
     const [hospitals] = await db.query('SELECT id FROM hospitals WHERE user_id = ?', [req.user.id]);
     const [offer] = await db.query('SELECT hospital_id FROM stage_offers WHERE id = ?', [id]);
-    
+
     if (offer.length === 0) {
       return res.status(404).json({ success: false, message: 'Offer not found' });
     }
@@ -210,15 +291,15 @@ const updateOffer = async (req, res, next) => {
 
     const fields = [];
     const values = [];
-    
+
     ['title', 'description', 'requirements', 'responsibilities', 'department', 'type',
-     'duration_weeks', 'positions', 'start_date', 'end_date', 'application_deadline',
-     'service_id', 'tutor_id', 'benefits', 'status'].forEach(field => {
-      if (updates[field] !== undefined) {
-        fields.push(`${field} = ?`);
-        values.push(updates[field]);
-      }
-    });
+      'duration_weeks', 'positions', 'start_date', 'end_date', 'application_deadline',
+      'service_id', 'tutor_id', 'benefits', 'status'].forEach(field => {
+        if (updates[field] !== undefined) {
+          fields.push(`${field} = ?`);
+          values.push(updates[field]);
+        }
+      });
 
     if (updates.skills_required !== undefined) {
       fields.push('skills_required = ?');
@@ -246,7 +327,7 @@ const deleteOffer = async (req, res, next) => {
 
     const [hospitals] = await db.query('SELECT id FROM hospitals WHERE user_id = ?', [req.user.id]);
     const [offer] = await db.query('SELECT hospital_id FROM stage_offers WHERE id = ?', [id]);
-    
+
     if (offer.length === 0) {
       return res.status(404).json({ success: false, message: 'Offer not found' });
     }
@@ -297,11 +378,11 @@ const copyOffer = async (req, res, next) => {
        responsibilities, department, type, duration_weeks, positions, start_date, end_date, 
        application_deadline, skills_required, benefits, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
-      [newId, original.hospital_id, original.service_id, original.tutor_id, `${original.title} (Copy)`, 
-       original.description, original.requirements, original.responsibilities,
-       original.department, original.type, original.duration_weeks, original.positions,
-       original.start_date, original.end_date, original.application_deadline,
-       original.skills_required, original.benefits]
+      [newId, original.hospital_id, original.service_id, original.tutor_id, `${original.title} (Copy)`,
+        original.description, original.requirements, original.responsibilities,
+        original.department, original.type, original.duration_weeks, original.positions,
+        original.start_date, original.end_date, original.application_deadline,
+        original.skills_required, original.benefits]
     );
 
     res.status(201).json({
@@ -322,7 +403,7 @@ const getFilterOptions = async (req, res, next) => {
        JOIN hospitals h ON h.id = o.hospital_id 
        WHERE o.status = 'published' AND h.city IS NOT NULL`
     );
-    
+
     const [departments] = await db.query(
       `SELECT DISTINCT department FROM stage_offers 
        WHERE status = 'published' AND department IS NOT NULL`
@@ -364,6 +445,9 @@ module.exports = {
   updateOffer,
   deleteOffer,
   copyOffer,
+  publishOffer,
+  closeOffer,
+  cancelOffer,
   getFilterOptions,
   getDepartments
 };

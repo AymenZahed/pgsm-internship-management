@@ -429,6 +429,16 @@ CREATE TABLE settings (
     email_notifications BOOLEAN DEFAULT TRUE,
     push_notifications BOOLEAN DEFAULT TRUE,
     sms_notifications BOOLEAN DEFAULT FALSE,
+    student_updates BOOLEAN DEFAULT TRUE,
+    logbook_alerts BOOLEAN DEFAULT TRUE,
+    message_alerts BOOLEAN DEFAULT TRUE,
+    evaluation_reminders BOOLEAN DEFAULT TRUE,
+    daily_digest BOOLEAN DEFAULT FALSE,
+    two_factor_enabled BOOLEAN DEFAULT FALSE,
+    session_timeout VARCHAR(20) DEFAULT '60',
+    login_alerts BOOLEAN DEFAULT TRUE,
+    timezone VARCHAR(50) DEFAULT 'Africa/Casablanca',
+    date_format VARCHAR(20) DEFAULT 'DD/MM/YYYY',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -448,4 +458,55 @@ VALUES (
     'Administrator',
     TRUE,
     TRUE
+);
+
+-- =====================================================
+-- SYSTEM CONFIGURATION
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS system_config (
+    `key` VARCHAR(100) PRIMARY KEY,
+    `value` TEXT,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- =====================================================
+-- REPORTS
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS reports (
+    id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    name VARCHAR(255) NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    status ENUM('generating', 'ready', 'failed') DEFAULT 'generating',
+    file_path VARCHAR(500),
+    file_size VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =====================================================
+-- SUPPORT TICKETS
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS support_tickets (
+    id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    user_id VARCHAR(36) NOT NULL,
+    subject VARCHAR(255) NOT NULL,
+    description TEXT,
+    status ENUM('open', 'in_progress', 'resolved', 'closed') DEFAULT 'open',
+    priority ENUM('low', 'medium', 'high', 'urgent') DEFAULT 'low',
+    category VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS support_responses (
+    id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    ticket_id VARCHAR(36) NOT NULL,
+    responder_id VARCHAR(36) NOT NULL,
+    message TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ticket_id) REFERENCES support_tickets(id) ON DELETE CASCADE,
+    FOREIGN KEY (responder_id) REFERENCES users(id) ON DELETE CASCADE
 );

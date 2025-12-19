@@ -6,8 +6,8 @@ const { calculateOverallScore } = require('../utils/helpers');
 const createEvaluation = async (req, res, next) => {
   try {
     const { internship_id, type, technical_skills_score, patient_relations_score,
-            teamwork_score, professionalism_score, strengths, weaknesses, 
-            recommendations, feedback } = req.body;
+      teamwork_score, professionalism_score, strengths, weaknesses,
+      recommendations, feedback } = req.body;
 
     // Get internship details
     const [internships] = await db.query(
@@ -19,11 +19,11 @@ const createEvaluation = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Internship not found' });
     }
 
-    const scores = { 
-      technical_skills_score, 
-      patient_relations_score, 
-      teamwork_score, 
-      professionalism_score 
+    const scores = {
+      technical_skills_score,
+      patient_relations_score,
+      teamwork_score,
+      professionalism_score
     };
     const overallScore = calculateOverallScore(scores);
 
@@ -34,8 +34,8 @@ const createEvaluation = async (req, res, next) => {
        professionalism_score, strengths, weaknesses, recommendations, feedback, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'submitted')`,
       [id, internship_id, internships[0].student_id, req.user.id, type,
-       overallScore, technical_skills_score, patient_relations_score, teamwork_score,
-       professionalism_score, strengths, weaknesses, recommendations, feedback]
+        overallScore, technical_skills_score, patient_relations_score, teamwork_score,
+        professionalism_score, strengths, weaknesses, recommendations, feedback]
     );
 
     res.status(201).json({
@@ -43,6 +43,19 @@ const createEvaluation = async (req, res, next) => {
       message: 'Evaluation created successfully',
       data: { id, overall_score: overallScore }
     });
+
+    const { createNotification } = require('./notification.controller');
+    // Fetch user_id from the student record
+    const [studentUser] = await db.query('SELECT user_id FROM students WHERE id = ?', [internships[0].student_id]);
+    if (studentUser.length > 0) {
+      await createNotification(
+        studentUser[0].user_id,
+        'evaluation',
+        'New Evaluation Received',
+        'Your tutor has submitted a new evaluation for your internship.',
+        { evaluation_id: id }
+      );
+    }
   } catch (error) {
     next(error);
   }
@@ -107,7 +120,7 @@ const getStudentEvaluations = async (req, res, next) => {
     // Calculate stats
     const stats = {
       total: evaluations.length,
-      average_score: evaluations.length > 0 
+      average_score: evaluations.length > 0
         ? (evaluations.reduce((sum, e) => sum + parseFloat(e.overall_score || 0), 0) / evaluations.length).toFixed(2)
         : 0,
       highest_score: evaluations.length > 0
@@ -172,11 +185,11 @@ const updateEvaluation = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
-    const scores = { 
-      technical_skills_score: updates.technical_skills_score, 
-      patient_relations_score: updates.patient_relations_score, 
-      teamwork_score: updates.teamwork_score, 
-      professionalism_score: updates.professionalism_score 
+    const scores = {
+      technical_skills_score: updates.technical_skills_score,
+      patient_relations_score: updates.patient_relations_score,
+      teamwork_score: updates.teamwork_score,
+      professionalism_score: updates.professionalism_score
     };
     const overallScore = calculateOverallScore(scores);
 
@@ -186,8 +199,8 @@ const updateEvaluation = async (req, res, next) => {
        strengths = ?, weaknesses = ?, recommendations = ?, feedback = ?
        WHERE id = ?`,
       [updates.technical_skills_score, updates.patient_relations_score,
-       updates.teamwork_score, updates.professionalism_score, overallScore,
-       updates.strengths, updates.weaknesses, updates.recommendations, updates.feedback, id]
+      updates.teamwork_score, updates.professionalism_score, overallScore,
+      updates.strengths, updates.weaknesses, updates.recommendations, updates.feedback, id]
     );
 
     res.json({
@@ -217,10 +230,10 @@ const getPendingEvaluations = async (req, res, next) => {
        JOIN users u ON u.id = s.user_id
        JOIN hospitals h ON h.id = i.hospital_id
        LEFT JOIN services sv ON sv.id = i.service_id
-       WHERE i.tutor_id = ? AND i.status = 'active'
+       WHERE (i.tutor_id = ? OR sv.head_doctor_id = ?) AND i.status = 'active'
        HAVING evaluation_count = 0 OR 
               (evaluation_count = 1 AND DATEDIFF(i.end_date, CURDATE()) <= 7)`,
-      [doctors[0].id]
+      [doctors[0].id, doctors[0].id]
     );
 
     res.json({

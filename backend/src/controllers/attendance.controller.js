@@ -154,8 +154,9 @@ const validateAttendance = async (req, res, next) => {
     }
 
     const [attendance] = await db.query(
-      `SELECT a.*, i.tutor_id FROM attendance a
+      `SELECT a.*, i.tutor_id, sv.head_doctor_id FROM attendance a
        JOIN internships i ON i.id = a.internship_id
+       LEFT JOIN services sv ON sv.id = i.service_id
        WHERE a.id = ?`,
       [id]
     );
@@ -164,9 +165,9 @@ const validateAttendance = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Attendance record not found' });
     }
 
-    // Verify doctor is tutor
+    // Verify doctor is tutor or service head
     const [doctors] = await db.query('SELECT id FROM doctors WHERE user_id = ?', [req.user.id]);
-    if (attendance[0].tutor_id !== doctors[0]?.id && req.user.role !== 'admin') {
+    if (attendance[0].tutor_id !== doctors[0]?.id && attendance[0].head_doctor_id !== doctors[0]?.id && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
@@ -286,11 +287,62 @@ const getAttendanceByDate = async (req, res, next) => {
   }
 };
 
+// Get tutor's students' attendance (for validation)
+const getTutorAttendance = async (req, res, next) => {
+  try {
+    const { status = 'pending' } = req.query;
+
+    // Get doctor ID
+    const [doctors] = await db.query('SELECT id FROM doctors WHERE user_id = ?', [req.user.id]);
+    if (doctors.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
+    let whereClause = '(i.tutor_id = ? OR sv.head_doctor_id = ?)';
+    const params = [doctors[0].id, doctors[0].id];
+
+    if (status) {
+      // Handle comma-separated statuses
+      const statuses = status.split(',').map(s => s.trim());
+      if (statuses.length > 1) {
+        const placeholders = statuses.map(() => '?').join(',');
+        whereClause += ` AND a.status IN (${placeholders})`;
+        params.push(...statuses);
+      } else {
+        whereClause += ' AND a.status = ?';
+        params.push(status);
+      }
+    }
+
+    const [attendance] = await db.query(
+      `SELECT a.*, u.first_name, u.last_name, u.avatar,
+              i.id as internship_id, h.name as hospital_name, sv.name as service_name
+       FROM attendance a
+       JOIN internships i ON i.id = a.internship_id
+       JOIN students s ON s.id = a.student_id
+       JOIN users u ON u.id = s.user_id
+       JOIN hospitals h ON h.id = i.hospital_id
+       LEFT JOIN services sv ON sv.id = i.service_id
+       WHERE ${whereClause}
+       ORDER BY a.date DESC, a.created_at DESC`,
+      params
+    );
+
+    res.json({
+      success: true,
+      data: attendance
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   recordAttendance,
   getMyAttendance,
   getPendingAttendance,
   validateAttendance,
   getAttendanceHistory,
-  getAttendanceByDate
+  getAttendanceByDate,
+  getTutorAttendance
 };

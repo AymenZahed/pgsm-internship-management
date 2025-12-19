@@ -19,5 +19,8 @@ router.post('/', roleMiddleware('hospital', 'admin'), offerValidator, validate, 
 router.put('/:id', roleMiddleware('hospital', 'admin'), idParamValidator, validate, offerController.updateOffer);
 router.delete('/:id', roleMiddleware('hospital', 'admin'), idParamValidator, validate, offerController.deleteOffer);
 router.post('/:id/copy', roleMiddleware('hospital', 'admin'), idParamValidator, validate, offerController.copyOffer);
+router.patch('/:id/publish', roleMiddleware('hospital', 'admin'), idParamValidator, validate, offerController.publishOffer);
+router.patch('/:id/close', roleMiddleware('hospital', 'admin'), idParamValidator, validate, offerController.closeOffer);
+router.patch('/:id/cancel', roleMiddleware('hospital', 'admin'), idParamValidator, validate, offerController.cancelOffer);
 
 module.exports = router;

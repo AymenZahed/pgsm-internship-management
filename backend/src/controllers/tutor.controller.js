@@ -93,8 +93,8 @@ const getTutorById = async (req, res, next) => {
 // Add tutor to hospital
 const addTutor = async (req, res, next) => {
   try {
-    const { email, password, first_name, last_name, phone, specialization, 
-            department, title, license_number, years_experience, max_students } = req.body;
+    const { email, password, first_name, last_name, phone, specialization,
+      department, title, license_number, years_experience, max_students } = req.body;
 
     const [hospitals] = await db.query('SELECT id FROM hospitals WHERE user_id = ?', [req.user.id]);
     if (hospitals.length === 0) {
@@ -103,32 +103,113 @@ const addTutor = async (req, res, next) => {
     const hospitalId = hospitals[0].id;
 
     // Check if email exists
-    const [existing] = await db.query('SELECT id FROM users WHERE email = ?', [email]);
-    if (existing.length > 0) {
-      return res.status(400).json({ success: false, message: 'Email already registered' });
+    const [existingUsers] = await db.query('SELECT id, role FROM users WHERE email = ?', [email]);
+
+    if (existingUsers.length > 0) {
+      const existingUser = existingUsers[0];
+
+      // Only allow reusing an email for existing doctor accounts
+      if (existingUser.role !== 'doctor') {
+        return res.status(400).json({ success: false, message: 'Email already registered' });
+      }
+
+      // Check doctor profile for this user
+      const [existingDoctors] = await db.query('SELECT id, hospital_id FROM doctors WHERE user_id = ?', [existingUser.id]);
+
+      if (existingDoctors.length === 0) {
+        // User exists as doctor role but no doctor record (edge case): create doctor profile
+        const doctorId = generateId();
+
+        // Optionally update basic user info and password
+        if (first_name || last_name || phone) {
+          await db.query(
+            'UPDATE users SET first_name = COALESCE(?, first_name), last_name = COALESCE(?, last_name), phone = COALESCE(?, phone) WHERE id = ?',
+            [first_name, last_name, phone, existingUser.id]
+          );
+        }
+        if (password) {
+          const hashedPassword = await hashPassword(password);
+          await db.query('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, existingUser.id]);
+        }
+
+        await db.query(
+          `INSERT INTO doctors (id, user_id, hospital_id, specialization, department, title, 
+           license_number, years_experience, max_students)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [doctorId, existingUser.id, hospitalId, specialization, department, title,
+            license_number, years_experience, max_students || 5]
+        );
+
+        // Ensure settings exist
+        await db.query('INSERT IGNORE INTO settings (id, user_id) VALUES (?, ?)', [generateId(), existingUser.id]);
+
+        return res.status(201).json({
+          success: true,
+          message: 'Tutor added successfully',
+          data: { id: doctorId }
+        });
+      }
+
+      const existingDoctor = existingDoctors[0];
+
+      // If doctor is already attached to a different hospital, block reuse
+      if (existingDoctor.hospital_id && existingDoctor.hospital_id !== hospitalId) {
+        return res.status(400).json({ success: false, message: 'Email already registered for a tutor in another hospital' });
+      }
+
+      // Doctor exists and either has no hospital or same hospital: re-associate/update
+      // Update basic user info
+      if (first_name || last_name || phone) {
+        await db.query(
+          'UPDATE users SET first_name = COALESCE(?, first_name), last_name = COALESCE(?, last_name), phone = COALESCE(?, phone) WHERE id = ?',
+          [first_name, last_name, phone, existingUser.id]
+        );
+      }
+
+      if (password) {
+        const hashedPassword = await hashPassword(password);
+        await db.query('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, existingUser.id]);
+      }
+
+      // Reattach / update doctor profile
+      await db.query(
+        `UPDATE doctors SET hospital_id = ?, specialization = COALESCE(?, specialization),
+         department = COALESCE(?, department), title = COALESCE(?, title),
+         license_number = COALESCE(?, license_number), years_experience = COALESCE(?, years_experience),
+         max_students = COALESCE(?, max_students), is_available = TRUE
+         WHERE id = ?`,
+        [hospitalId, specialization, department, title, license_number, years_experience, max_students || 5, existingDoctor.id]
+      );
+
+      // Ensure settings exist
+      await db.query('INSERT IGNORE INTO settings (id, user_id) VALUES (?, ?)', [generateId(), existingUser.id]);
+
+      return res.status(201).json({
+        success: true,
+        message: 'Tutor re-assigned to hospital successfully',
+        data: { id: existingDoctor.id }
+      });
     }
 
+    // No existing user: create fresh account
     const hashedPassword = await hashPassword(password);
     const userId = generateId();
     const doctorId = generateId();
 
-    // Create user
     await db.query(
       `INSERT INTO users (id, email, password, role, first_name, last_name, phone)
        VALUES (?, ?, ?, 'doctor', ?, ?, ?)`,
       [userId, email, hashedPassword, first_name, last_name, phone]
     );
 
-    // Create doctor profile
     await db.query(
       `INSERT INTO doctors (id, user_id, hospital_id, specialization, department, title, 
        license_number, years_experience, max_students)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [doctorId, userId, hospitalId, specialization, department, title, 
-       license_number, years_experience, max_students || 5]
+      [doctorId, userId, hospitalId, specialization, department, title,
+        license_number, years_experience, max_students || 5]
     );
 
-    // Create settings
     await db.query('INSERT INTO settings (id, user_id) VALUES (?, ?)', [generateId(), userId]);
 
     res.status(201).json({
@@ -145,8 +226,8 @@ const addTutor = async (req, res, next) => {
 const updateTutor = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { first_name, last_name, phone, specialization, department, 
-            title, license_number, years_experience, max_students, is_available } = req.body;
+    const { first_name, last_name, phone, specialization, department,
+      title, license_number, years_experience, max_students, is_available } = req.body;
 
     // Verify ownership
     const [hospitals] = await db.query('SELECT id FROM hospitals WHERE user_id = ?', [req.user.id]);
@@ -351,8 +432,8 @@ const getDoctorStudents = async (req, res, next) => {
 
     const { status = 'active', search } = req.query;
 
-    let whereClause = 'i.tutor_id = ?';
-    const params = [doctorId];
+    let whereClause = '(i.tutor_id = ? OR sv.head_doctor_id = ?)';
+    const params = [doctorId, doctorId];
 
     if (status) {
       whereClause += ' AND i.status = ?';
@@ -365,7 +446,7 @@ const getDoctorStudents = async (req, res, next) => {
     }
 
     const [students] = await db.query(`
-      SELECT i.*, u.first_name, u.last_name, u.avatar, u.email, u.phone,
+      SELECT i.*, u.id as user_id, u.first_name, u.last_name, u.avatar, u.email, u.phone,
              s.student_number, s.faculty, s.academic_year,
              sv.name as service_name, h.name as hospital_name,
              (SELECT AVG(overall_score) FROM evaluations WHERE student_id = s.id) as avg_evaluation,
@@ -407,8 +488,8 @@ const getDoctorStudentById = async (req, res, next) => {
       JOIN users u ON u.id = s.user_id
       JOIN hospitals h ON h.id = i.hospital_id
       LEFT JOIN services sv ON sv.id = i.service_id
-      WHERE i.id = ? AND i.tutor_id = ?
-    `, [id, doctors[0].id]);
+      WHERE i.id = ? AND (i.tutor_id = ? OR sv.head_doctor_id = ?)
+    `, [id, doctors[0].id, doctors[0].id]);
 
     if (internships.length === 0) {
       return res.status(404).json({ success: false, message: 'Student not found or not assigned to you' });

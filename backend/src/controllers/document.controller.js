@@ -3,30 +3,32 @@ const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
 const path = require('path');
 
-// Upload document
+// Upload document (generic)
 const uploadDocument = async (req, res, next) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
 
-    const { type, application_id } = req.body;
+    const { type, application_id, name } = req.body;
 
     const id = uuidv4();
+    const displayName = name && name.trim() ? name.trim() : req.file.originalname;
+
     await db.query(
       `INSERT INTO documents (id, user_id, application_id, type, name, file_path, file_size, mime_type)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, req.user.id, application_id || null, type, req.file.originalname, 
-       req.file.path, req.file.size, req.file.mimetype]
+      [id, req.user.id, application_id || null, type, displayName,
+        req.file.path, req.file.size, req.file.mimetype]
     );
 
     res.status(201).json({
       success: true,
       message: 'Document uploaded successfully',
-      data: { 
-        id, 
-        name: req.file.originalname,
-        path: req.file.path 
+      data: {
+        id,
+        name: displayName,
+        path: req.file.path
       }
     });
   } catch (error) {
@@ -34,13 +36,118 @@ const uploadDocument = async (req, res, next) => {
   }
 };
 
-// Get user's documents
-const getMyDocuments = async (req, res, next) => {
+// Upload profile-level document (application_id IS NULL)
+const uploadProfileDocument = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    const { type, name } = req.body;
+
+    const id = uuidv4();
+    const displayName = name && name.trim() ? name.trim() : req.file.originalname;
+
+    await db.query(
+      `INSERT INTO documents (id, user_id, application_id, type, name, file_path, file_size, mime_type)
+       VALUES (?, ?, NULL, ?, ?, ?, ?, ?)`,
+      [id, req.user.id, type, displayName, req.file.path, req.file.size, req.file.mimetype]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Document uploaded successfully',
+      data: {
+        id,
+        name: displayName,
+        path: req.file.path,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get profile-level documents for current user
+const getMyProfileDocuments = async (req, res, next) => {
   try {
     const { type } = req.query;
 
+    let whereClause = 'user_id = ? AND application_id IS NULL';
+    const params = [req.user.id];
+
+    if (type) {
+      whereClause += ' AND type = ?';
+      params.push(type);
+    }
+
+    const [documents] = await db.query(
+      `SELECT * FROM documents WHERE ${whereClause} ORDER BY created_at DESC`,
+      params
+    );
+
+    res.json({
+      success: true,
+      data: documents,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Delete profile-level document (ensuring it is not bound to an application)
+const deleteProfileDocument = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const [documents] = await db.query('SELECT * FROM documents WHERE id = ?', [id]);
+
+    if (documents.length === 0) {
+      return res.status(404).json({ success: false, message: 'Document not found' });
+    }
+
+    const doc = documents[0];
+
+    if (doc.user_id !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    if (doc.application_id) {
+      return res.status(400).json({ success: false, message: 'Cannot delete application-bound document via profile endpoint' });
+    }
+
+    const filePath = path.resolve(doc.file_path);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    await db.query('DELETE FROM documents WHERE id = ?', [id]);
+
+    res.json({
+      success: true,
+      message: 'Document deleted successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get user's documents (generic - can be filtered by type and application)
+const getMyDocuments = async (req, res, next) => {
+  try {
+    const { type, application_id } = req.query;
+
     let whereClause = 'user_id = ?';
     const params = [req.user.id];
+
+    if (typeof application_id !== 'undefined') {
+      if (application_id === 'null') {
+        whereClause += ' AND application_id IS NULL';
+      } else {
+        whereClause += ' AND application_id = ?';
+        params.push(application_id);
+      }
+    }
 
     if (type) {
       whereClause += ' AND type = ?';
@@ -197,4 +304,8 @@ module.exports = {
   downloadDocument,
   deleteDocument,
   verifyDocument
+  ,
+  uploadProfileDocument,
+  getMyProfileDocuments,
+  deleteProfileDocument
 };

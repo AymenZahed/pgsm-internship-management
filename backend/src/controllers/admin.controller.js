@@ -121,11 +121,40 @@ const createUser = async (req, res, next) => {
     } else if (role === 'doctor') {
       await db.query('INSERT INTO doctors (id, user_id) VALUES (?, ?)', [generateId(), userId]);
     } else if (role === 'hospital') {
-      await db.query('INSERT INTO hospitals (id, user_id, name) VALUES (?, ?, ?)', 
+      await db.query('INSERT INTO hospitals (id, user_id, name) VALUES (?, ?, ?)',
         [generateId(), userId, `${first_name} ${last_name}`]);
     }
 
     await db.query('INSERT INTO settings (id, user_id) VALUES (?, ?)', [generateId(), userId]);
+
+    // Send welcome email
+    try {
+      const { sendEmail } = require('../utils/email.service');
+      await sendEmail({
+        to: email,
+        subject: 'Welcome to PGSM - Your Account Created',
+        html: `
+          <div style="font-family: Arial, sans-serif; color: #333;">
+            <h2>Welcome to PGSM</h2>
+            <p>Dear ${first_name} ${last_name},</p>
+            <p>Your account has been created successfully with the role: <strong>${role}</strong>.</p>
+            <p>Your login credentials are:</p>
+            <ul>
+              <li><strong>Email:</strong> ${email}</li>
+              <li><strong>Password:</strong> ${password}</li>
+            </ul>
+            <p>Please log in and change your password immediately.</p>
+            <br>
+            <p>Best regards,<br>PGSM Administration</p>
+          </div>
+        `
+      });
+    } catch (emailError) {
+      console.error('Failed to send welcome email:', emailError);
+      // Continue execution, don't fail the request if email fails?
+      // User asked to "send him password", implies important.
+      // But creating user is done.
+    }
 
     res.status(201).json({
       success: true,

@@ -1,11 +1,15 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { v4: uuidv4 } = require('uuid');
 
 // Hash password
 const hashPassword = async (password) => {
   const salt = await bcrypt.genSalt(10);
   return bcrypt.hash(password, salt);
 };
+
+// Generate unique ID for entities
+const generateId = () => uuidv4();
 
 // Compare password
 const comparePassword = async (password, hashedPassword) => {
@@ -86,5 +90,6 @@ module.exports = {
   formatDateTime,
   calculateOverallScore,
   paginate,
-  paginationResponse
+  paginationResponse,
+  generateId
 };

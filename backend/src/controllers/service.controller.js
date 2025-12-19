@@ -13,15 +13,21 @@ const getServices = async (req, res, next) => {
       if (hospitals.length > 0) hospitalId = hospitals[0].id;
     }
 
-    if (!hospitalId) {
+    // Require hospital_id unless user is admin
+    if (!hospitalId && req.user.role !== 'admin') {
       return res.status(400).json({
         success: false,
         message: 'Hospital ID is required'
       });
     }
 
-    let whereClause = 's.hospital_id = ?';
-    const params = [hospitalId];
+    let whereClause = '1=1';
+    const params = [];
+
+    if (hospitalId) {
+      whereClause += ' AND s.hospital_id = ?';
+      params.push(hospitalId);
+    }
 
     if (search) {
       whereClause += ' AND (s.name LIKE ? OR s.department LIKE ?)';
@@ -31,12 +37,14 @@ const getServices = async (req, res, next) => {
     const [services] = await db.query(
       `SELECT s.*, 
               CONCAT(u.first_name, ' ', u.last_name) as head_doctor_name,
-              (SELECT COUNT(*) FROM internships i WHERE i.service_id = s.id AND i.status = 'active') as current_interns
+              (SELECT COUNT(*) FROM internships i WHERE i.service_id = s.id AND i.status = 'active') as current_interns,
+              h.name as hospital_name
        FROM services s
+       LEFT JOIN hospitals h ON h.id = s.hospital_id
        LEFT JOIN doctors d ON d.id = s.head_doctor_id
        LEFT JOIN users u ON u.id = d.user_id
        WHERE ${whereClause}
-       ORDER BY s.name ASC`,
+       ORDER BY h.name ASC, s.name ASC`,
       params
     );
 
@@ -132,7 +140,7 @@ const updateService = async (req, res, next) => {
     // Verify ownership
     const [hospitals] = await db.query('SELECT id FROM hospitals WHERE user_id = ?', [req.user.id]);
     const [service] = await db.query('SELECT hospital_id FROM services WHERE id = ?', [id]);
-    
+
     if (service.length === 0) {
       return res.status(404).json({ success: false, message: 'Service not found' });
     }
@@ -168,7 +176,7 @@ const deleteService = async (req, res, next) => {
     // Verify ownership
     const [hospitals] = await db.query('SELECT id FROM hospitals WHERE user_id = ?', [req.user.id]);
     const [service] = await db.query('SELECT hospital_id FROM services WHERE id = ?', [id]);
-    
+
     if (service.length === 0) {
       return res.status(404).json({ success: false, message: 'Service not found' });
     }

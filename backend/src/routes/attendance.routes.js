@@ -12,6 +12,7 @@ router.post('/', roleMiddleware('student'), attendanceValidator, validate, atten
 router.get('/my-attendance', roleMiddleware('student'), attendanceController.getMyAttendance);
 
 // Doctor routes
+router.get('/tutor/attendance', roleMiddleware('doctor'), attendanceController.getTutorAttendance);
 router.get('/pending', roleMiddleware('doctor'), attendanceController.getPendingAttendance);
 router.get('/history', roleMiddleware('doctor'), attendanceController.getAttendanceHistory);
 router.get('/by-date', roleMiddleware('doctor'), attendanceController.getAttendanceByDate);
