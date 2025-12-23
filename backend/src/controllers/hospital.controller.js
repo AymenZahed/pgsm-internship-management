@@ -355,11 +355,42 @@ const getHospitalStatistics = async (req, res, next) => {
 
     // Department distribution
     const [departmentStats] = await db.query(`
-      SELECT sv.department, COUNT(i.id) as intern_count
+      SELECT sv.department, COUNT(i.id) as students
       FROM services sv
       LEFT JOIN internships i ON i.service_id = sv.id AND i.status = 'active'
       WHERE sv.hospital_id = ? AND sv.department IS NOT NULL
       GROUP BY sv.department
+    `, [hospitalId]);
+
+    // Weekly Attendance (last 8 weeks)
+    const [attendanceStats] = await db.query(`
+        SELECT 
+            DATE_FORMAT(a.date, '%Y-%u') as week_code,
+            DATE_FORMAT(MIN(a.date), '%b %d') as week_label,
+            COUNT(*) as total_records,
+            SUM(CASE WHEN a.status IN ('present', 'approved', 'late') THEN 1 ELSE 0 END) as present_count,
+            ROUND(SUM(CASE WHEN a.status IN ('present', 'approved', 'late') THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) as rate
+        FROM attendance a
+        JOIN internships i ON i.id = a.internship_id
+        WHERE i.hospital_id = ? AND a.date >= DATE_SUB(CURDATE(), INTERVAL 8 WEEK)
+        GROUP BY week_code
+        ORDER BY week_code ASC
+    `, [hospitalId]);
+
+    // University Stats (Active Interns)
+    const [universityStats] = await db.query(`
+        SELECT 
+            CASE 
+                WHEN s.faculty IS NULL OR s.faculty = '' THEN 'Unknown'
+                ELSE s.faculty 
+            END as name,
+            COUNT(i.id) as students
+        FROM internships i
+        JOIN students s ON s.id = i.student_id
+        WHERE i.hospital_id = ? AND i.status = 'active'
+        GROUP BY name
+        ORDER BY students DESC
+        LIMIT 10
     `, [hospitalId]);
 
     // Overall stats
@@ -377,7 +408,15 @@ const getHospitalStatistics = async (req, res, next) => {
         monthlyApplications,
         serviceStats,
         tutorStats,
-        departmentStats,
+        departmentStats: departmentStats.map((d, i) => ({
+          ...d,
+          color: ['#3b82f6', '#ef4444', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#14b8a6'][i % 8]
+        })),
+        attendanceStats: attendanceStats.map(a => ({
+          week: a.week_label,
+          rate: parseFloat(a.rate)
+        })),
+        universityStats,
         overallStats: overallStats[0]
       }
     });

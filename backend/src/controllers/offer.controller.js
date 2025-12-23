@@ -252,11 +252,11 @@ const createOffer = async (req, res, next) => {
 
     const id = generateId();
     await db.query(
-      `INSERT INTO stage_offers (id, hospital_id, service_id, tutor_id, title, description, requirements, 
+      `INSERT INTO stage_offers (id, hospital_id, service_id, title, description, requirements, 
        responsibilities, department, type, duration_weeks, positions, start_date, end_date, 
        application_deadline, skills_required, benefits, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, hospitalId, service_id, tutor_id, title, description, requirements, responsibilities,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, hospitalId, service_id, title, description, requirements, responsibilities,
         department, type || 'required', duration_weeks, positions || 1, start_date, end_date,
         application_deadline, JSON.stringify(skills_required || []), benefits, status || 'draft']
     );

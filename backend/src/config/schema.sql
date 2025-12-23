@@ -444,21 +444,6 @@ CREATE TABLE settings (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- =====================================================
--- INSERT DEFAULT ADMIN USER
--- =====================================================
-
-INSERT INTO users (id, email, password, role, first_name, last_name, is_active, email_verified) 
-VALUES (
-    UUID(),
-    'admin@example.com',
-    '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- password: 'password'
-    'admin',
-    'System',
-    'Administrator',
-    TRUE,
-    TRUE
-);
 
 -- =====================================================
 -- SYSTEM CONFIGURATION
@@ -509,4 +494,20 @@ CREATE TABLE IF NOT EXISTS support_responses (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (ticket_id) REFERENCES support_tickets(id) ON DELETE CASCADE,
     FOREIGN KEY (responder_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- =====================================================
+-- INSERT DEFAULT ADMIN USER
+-- =====================================================
+
+INSERT INTO users (id, email, password, role, first_name, last_name, is_active, email_verified) 
+VALUES (
+    UUID(),
+    'admin@example.com',
+    '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- password: 'password'
+    'admin',
+    'System',
+    'Administrator',
+    TRUE,
+    TRUE
 );
